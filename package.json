@@ -1,0 +1,20 @@
+{
+  "name": "stack-attack",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "description": "Siemens Stack Attack stila noliktavas spēle pārlūkā",
+  "scripts": {
+    "dev": "vite --port 3177 --host",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 3177 --host",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "vite": "^7.1.5"
+  }
+}

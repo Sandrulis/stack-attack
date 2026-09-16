@@ -1,0 +1,11 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "stack-attack"
+    }
+  ],
+  "settings": {
+    "editor.tabSize": 2
+  }
+}

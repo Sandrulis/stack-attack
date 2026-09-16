@@ -1,0 +1,10 @@
+---
+description: Assistant response language preference
+alwaysApply: true
+---
+
+# Saziņas Valoda
+
+- Ar lietotāju pēc noklusējuma runā latviski.
+- Ja lietotājs skaidri prasa citu valodu, atbildi prasītajā valodā.
+- Kodu, komandas, failu ceļus, kļūdu tekstus un citātus saglabā to oriģinālajā valodā, ja tas ir precīzāk vai tehniski nepieciešams.
