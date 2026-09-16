@@ -6,7 +6,6 @@ import {
   CRATE_FALL_MS,
   CRATE_SLIDE_MS,
   DEATH_MS,
-  EXPLODE_MS,
   FALL_MS,
   HIGH_SCORE_KEY,
   CRANE_DROP_MS,
@@ -89,6 +88,8 @@ export type GameState = {
   popups: Popup[];
   score: number;
   best: number;
+  recordAtStart: number;
+  sunset: number;
   shake: number;
   flash: number;
   explodeT: number;
@@ -181,6 +182,8 @@ export function createGame(): GameState {
     popups: [],
     score: 0,
     best: loadBest(),
+    recordAtStart: loadBest(),
+    sunset: 0,
     shake: 0,
     flash: 0,
     explodeT: 0,
@@ -198,6 +201,8 @@ export function startRun(state: GameState) {
   state.particles = [];
   state.popups = [];
   state.score = 0;
+  state.recordAtStart = state.best;
+  state.sunset = 0;
   state.shake = 0;
   state.flash = 0;
   state.explodeT = 0;
@@ -524,39 +529,30 @@ function burstRow(state: GameState) {
   }
   state.crates = state.crates.filter((c) => c.row !== 0);
   for (const crate of state.crates) {
-    crate.fromCol = crate.col;
-    crate.fromRow = crate.row;
-    crate.row -= 1;
+    const vis = crate.moving ? visualPos(crate) : { col: crate.col, row: crate.row };
+    crate.fromCol = vis.col;
+    crate.fromRow = vis.row;
+    crate.row = Math.max(0, crate.row - 1);
     crate.animT = 0;
     crate.animDur = FALL_MS + 40;
     crate.moving = true;
   }
   const p = state.player;
-  if (p.row > 0) {
-    p.fromCol = p.col;
-    p.fromRow = p.row;
+  if (p.row > 0 && p.pose !== "dead") {
+    const vis = p.moving ? visualPos(p, p.pose === "jump") : { col: p.col, row: p.row };
+    p.fromCol = vis.col;
+    p.fromRow = vis.row;
     p.row -= 1;
     p.animT = 0;
     p.animDur = FALL_MS + 40;
     p.moving = true;
     p.pose = "fall";
+    p.jumpT = 0;
   }
   addScore(state, p.col, Math.max(1, p.row + 1));
   state.flash = 1;
   state.shake = 7;
   sfx.clear();
-}
-
-function updateExploding(state: GameState, dt: number) {
-  state.explodeT -= dt;
-  if (state.explodeT > 0) return;
-  burstRow(state);
-  state.phase = "playing";
-  applyCrateGravity(state);
-  if (bottomRowFull(state) && state.crates.every((c) => !c.moving)) {
-    state.phase = "exploding";
-    state.explodeT = EXPLODE_MS * 0.7;
-  }
 }
 
 function playerGravity(state: GameState) {
@@ -839,6 +835,9 @@ export function updateGame(state: GameState, dt: number) {
   state.time += dt;
   state.shake = Math.max(0, state.shake - dt * 0.028);
   state.flash = Math.max(0, state.flash - dt * 0.004);
+  if (state.phase !== "title" && state.phase !== "paused" && state.score > state.recordAtStart) {
+    state.sunset = Math.min(1, state.sunset + dt / 1100);
+  }
   updateParticles(state, dt);
 
   if (state.phase === "title" || state.phase === "paused") return;
@@ -850,11 +849,6 @@ export function updateGame(state: GameState, dt: number) {
       else stepAnim(crate, dt);
     }
     state.deathT -= dt;
-    return;
-  }
-
-  if (state.phase === "exploding") {
-    updateExploding(state, dt);
     return;
   }
 
@@ -886,11 +880,7 @@ export function updateGame(state: GameState, dt: number) {
     if (resolveCrateHit(state, crate) === "kill") return;
   }
 
-  const unsettled = state.crates.some((c) => c.moving) || state.player.moving;
-  if (!unsettled && bottomRowFull(state)) {
-    state.phase = "exploding";
-    state.explodeT = EXPLODE_MS;
-  }
+  if (bottomRowFull(state)) burstRow(state);
 }
 
 export function isGameOverVisible(state: GameState): boolean {

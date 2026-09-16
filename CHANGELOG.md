@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.6
+
+- Pilna rinda pazūd plūdeni, neapstādinot telferus un pārējo spēli
+- Pārspējot rekordu, aiz noliktavas logiem parādās sarkans saulriets
+
 ## v0.1.5
 
 - Mobilais džoistiks par 15% šaurāks, lai mazāk aizsedz laukumu

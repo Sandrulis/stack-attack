@@ -85,12 +85,11 @@ export function drawGame(ctx: CanvasRenderingContext2D, state: GameState) {
   const shakeY = state.shake ? (Math.random() - 0.5) * state.shake : 0;
   ctx.save();
   ctx.translate(shakeX, shakeY);
-  drawWorld(ctx);
+  drawWorld(ctx, state);
   drawCranes(ctx, state);
   drawCrates(ctx, state, false);
   drawPlayer(ctx, state.player, state.time, state.deathT);
   drawCrates(ctx, state, true);
-  if (state.phase === "exploding") drawExplosion(ctx, state);
   drawParticles(ctx, state);
   drawPopups(ctx, state);
   if (state.flash > 0) {
@@ -100,7 +99,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, state: GameState) {
   ctx.restore();
 }
 
-function drawWorld(ctx: CanvasRenderingContext2D) {
+function drawWorld(ctx: CanvasRenderingContext2D, state: GameState) {
   const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
   sky.addColorStop(0, PALETTE.skyTop);
   sky.addColorStop(1, PALETTE.skyBottom);
@@ -113,7 +112,7 @@ function drawWorld(ctx: CanvasRenderingContext2D) {
   drawCloud(ctx, 510, 28, 3);
 
   drawStoneWall(ctx);
-  drawWindows(ctx);
+  drawWindows(ctx, state.sunset);
   drawRails(ctx);
   drawGrassFloor(ctx);
 
@@ -148,7 +147,7 @@ function drawStoneWall(ctx: CanvasRenderingContext2D) {
   }
 }
 
-function drawWindows(ctx: CanvasRenderingContext2D) {
+function drawWindows(ctx: CanvasRenderingContext2D, sunset: number) {
   const pad = 10;
   const gaps = 8;
   const count = 3;
@@ -156,15 +155,33 @@ function drawWindows(ctx: CanvasRenderingContext2D) {
   const winW = (totalW - gaps * (count - 1)) / count;
   const winH = ROWS * CELL * 0.52;
   const winY = ORIGIN_Y + 10;
+  const t = Math.max(0, Math.min(1, sunset));
   for (let i = 0; i < count; i += 1) {
     const x = pad + i * (winW + gaps);
     box(ctx, x - 6, winY - 6, winW + 12, winH + 12, PALETTE.windowFrame, PALETTE.iron, PALETTE.grout);
-    const sky = ctx.createLinearGradient(x, winY, x, winY + winH);
-    sky.addColorStop(0, PALETTE.skyTop);
-    sky.addColorStop(1, PALETTE.skyBottom);
-    ctx.fillStyle = sky;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, winY, winW, winH);
+    ctx.clip();
+    const day = ctx.createLinearGradient(x, winY, x, winY + winH);
+    day.addColorStop(0, PALETTE.skyTop);
+    day.addColorStop(1, PALETTE.skyBottom);
+    ctx.fillStyle = day;
     ctx.fillRect(x, winY, winW, winH);
-    ctx.fillStyle = PALETTE.glass;
+    if (t > 0) {
+      ctx.globalAlpha = t;
+      const dusk = ctx.createLinearGradient(x, winY, x, winY + winH);
+      dusk.addColorStop(0, "#2a1038");
+      dusk.addColorStop(0.38, "#a32248");
+      dusk.addColorStop(0.7, "#e24a28");
+      dusk.addColorStop(1, "#ffb15a");
+      ctx.fillStyle = dusk;
+      ctx.fillRect(x, winY, winW, winH);
+      drawSunsetSun(ctx, winY, winH);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    ctx.fillStyle = t > 0 ? `rgba(255, 140, 80, ${0.12 * t})` : PALETTE.glass;
     ctx.fillRect(x, winY, winW, winH);
     ctx.fillStyle = PALETTE.glassEdge;
     ctx.fillRect(x, winY, winW, 8);
@@ -172,6 +189,30 @@ function drawWindows(ctx: CanvasRenderingContext2D) {
     ctx.fillRect(x + winW / 2 - 2, winY, 4, winH);
     ctx.fillRect(x, winY + winH / 2 - 2, winW, 4);
   }
+}
+
+function drawSunsetSun(ctx: CanvasRenderingContext2D, winY: number, winH: number) {
+  const cx = CANVAS_W * 0.55;
+  const cy = winY + winH * 0.82;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.fillStyle = "rgba(255, 90, 40, 0.28)";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 130, 78, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ff5a28";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 62, 62, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ff9a48";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 42, 42, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffe08a";
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, 18, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawRails(ctx: CanvasRenderingContext2D) {
@@ -228,7 +269,6 @@ function drawCrates(ctx: CanvasRenderingContext2D, state: GameState, front: bool
   const sorted = [...state.crates].sort((a, b) => b.row - a.row);
   for (const crate of sorted) {
     if (crateDrawInFront(state, crate) !== front) continue;
-    if (state.phase === "exploding" && crate.row === 0) continue;
     const pos = visualPos(crate);
     const { x, y } = gridToScreen(pos.col, pos.row);
     drawCrateSprite(ctx, x, y, CRATE_SCALE);
@@ -259,15 +299,6 @@ function drawCrateSprite(ctx: CanvasRenderingContext2D, x: number, y: number, sc
   ctx.fillRect(latchX, latchY, half, latchH);
   ctx.fillStyle = "#7a7a7a";
   ctx.fillRect(latchX + half, latchY, latchW - half, latchH);
-}
-
-function drawExplosion(ctx: CanvasRenderingContext2D, state: GameState) {
-  const pulse = 0.55 + Math.sin(state.time / 40) * 0.45;
-  for (let col = 0; col < COLS; col += 1) {
-    const { x, y } = gridToScreen(col, 0);
-    box(ctx, x + 8, y + 8, CELL - 16, CELL - 16, `rgba(255, 85, 85, ${pulse})`, PALETTE.gold, "#7a0000");
-    box(ctx, x + 22, y + 22, CELL - 44, CELL - 44, PALETTE.gold, "#fff6a8", PALETTE.goldDark);
-  }
 }
 
 function voxelLimb(
