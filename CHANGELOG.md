@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.2
+
+- Kastēm tumša kvadrātveida maliņa un aizdare, lai saliktas kastes paliek atšķiramas
+- Plūdena kastes krišana bez rūtiņu saraustīšanās
+- Saspiešanā cilvēciņš saplacinās zem kastes, galva un rokas izlien no malām
+
 ## v0.1.1
 
 - Plūdenāka, lēnāka cilvēciņa staigāšana un stumšana, ar roku piespiešanu pret kasti

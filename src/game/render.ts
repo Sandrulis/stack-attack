@@ -4,6 +4,7 @@ import {
   CELL,
   COLS,
   CRATE_SCALE,
+  DEATH_MS,
   ORIGIN_X,
   ORIGIN_Y,
   PALETTE,
@@ -50,9 +51,10 @@ export function drawGame(ctx: CanvasRenderingContext2D, state: GameState) {
   ctx.translate(shakeX, shakeY);
   drawWorld(ctx);
   drawCranes(ctx, state);
+  if (state.player.pose === "dead") drawPlayer(ctx, state.player, state.time, state.deathT);
   drawCrates(ctx, state);
   if (state.phase === "exploding") drawExplosion(ctx, state);
-  drawPlayer(ctx, state.player, state.time);
+  if (state.player.pose !== "dead") drawPlayer(ctx, state.player, state.time, state.deathT);
   drawParticles(ctx, state);
   drawPopups(ctx, state);
   if (state.flash > 0) {
@@ -191,31 +193,28 @@ function drawCrates(ctx: CanvasRenderingContext2D, state: GameState) {
 
 function drawCrateSprite(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
   const s = CELL * scale;
-  const r = Math.max(8, Math.round(s * 0.12));
-  const strapH = Math.max(6, Math.round(s * 0.08));
-  const strapY = y + Math.round(s * 0.36);
-  const latchW = Math.max(8, Math.round(s * 0.12));
-  const latchH = Math.max(18, Math.round(s * 0.24));
+  const border = Math.max(4, Math.round(s * 0.08));
+  const inner = s - border * 2;
+  const strapH = Math.max(5, Math.round(s * 0.07));
+  const strapY = y + border + Math.round(inner * 0.32);
+  const latchW = Math.max(8, Math.round(s * 0.11));
+  const latchH = Math.max(16, Math.round(s * 0.22));
   const latchX = x + (s - latchW) / 2;
   const latchY = strapY + strapH / 2 - latchH / 2;
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(x, y, s, s, r);
+  ctx.fillStyle = PALETTE.crateDark;
+  ctx.fillRect(x, y, s, s);
   ctx.fillStyle = PALETTE.crate;
-  ctx.fill();
-  ctx.clip();
+  ctx.fillRect(x + border, y + border, inner, inner);
 
   ctx.fillStyle = PALETTE.crateBand;
-  ctx.fillRect(x, strapY, s, strapH);
+  ctx.fillRect(x + border, strapY, inner, strapH);
 
-  ctx.fillStyle = "#6a6a6a";
-  ctx.fillRect(latchX, latchY, latchW / 2, latchH);
-  ctx.fillStyle = "#d0d0d0";
-  ctx.fillRect(latchX + latchW / 2, latchY, Math.ceil(latchW / 2), latchH);
-  ctx.fillStyle = "#8d8d8d";
-  ctx.fillRect(latchX + latchW / 2 - 1, latchY, 2, latchH);
-  ctx.restore();
+  const half = Math.floor(latchW / 2);
+  ctx.fillStyle = "#c8bec0";
+  ctx.fillRect(latchX, latchY, half, latchH);
+  ctx.fillStyle = "#7a7a7a";
+  ctx.fillRect(latchX + half, latchY, latchW - half, latchH);
 }
 
 function drawExplosion(ctx: CanvasRenderingContext2D, state: GameState) {
@@ -273,7 +272,84 @@ function voxelArm(
   ctx.restore();
 }
 
-function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number) {
+function drawCrushedPlayer(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  facing: number,
+  deathT: number,
+) {
+  const elapsed = Math.max(0, DEATH_MS - deathT);
+  const squash = Math.min(1, elapsed / 180);
+  const k = squash * squash * (3 - 2 * squash);
+  const pop = Math.min(1, Math.max(0, (elapsed - 70) / 160));
+  const wobble = pop > 0.95 ? Math.sin(elapsed / 55) * 1.2 : 0;
+
+  ctx.save();
+  ctx.translate(x + CELL / 2 + wobble, y + CELL);
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+  ctx.fillRect(-36, -7, 72, 6);
+
+  const shoeSpread = 16 + k * 12;
+  box(ctx, -shoeSpread - 12, -9, 16, 8, PALETTE.shoe, PALETTE.shoe, PALETTE.grout);
+  box(ctx, shoeSpread - 4, -9, 16, 8, PALETTE.shoe, PALETTE.shoe, PALETTE.grout);
+
+  const pantsW = 22 + k * 26;
+  box(ctx, -pantsW / 2, -14, pantsW, 8 - k * 2, PALETTE.pants, PALETTE.pants, PALETTE.pantsDark);
+
+  const shirtW = 26 + k * 30;
+  box(ctx, -shirtW / 2, -20 + k * 4, shirtW, 12 - k * 4, PALETTE.shirt, PALETTE.shirt, PALETTE.shirtDark);
+
+  voxelLimb(
+    ctx,
+    -shirtW / 2 + 2,
+    -16,
+    1.35,
+    8,
+    14 + pop * 8,
+    PALETTE.shirt,
+    PALETTE.skinLight,
+    PALETTE.shirtDark,
+    PALETTE.skin,
+  );
+  voxelLimb(
+    ctx,
+    shirtW / 2 - 2,
+    -16,
+    -1.35,
+    8,
+    14 + pop * 8,
+    PALETTE.shirt,
+    PALETTE.skinLight,
+    PALETTE.shirtDark,
+    PALETTE.skin,
+  );
+
+  const headX = facing * (22 + pop * 18);
+  const headY = -20 + (1 - k) * -28;
+  ctx.save();
+  ctx.translate(headX, headY);
+  ctx.scale(facing, 1 - k * 0.18);
+  box(ctx, -13, -13, 26, 24, PALETTE.skin, PALETTE.skinLight, PALETTE.skinDark);
+  ctx.fillStyle = PALETTE.hair;
+  ctx.fillRect(-13, -13, 26, 9);
+  ctx.fillRect(-13, -13, 8, 17);
+  ctx.fillStyle = "#3b2314";
+  ctx.fillRect(0, 1, 10, 3);
+  ctx.fillRect(3, -2, 3, 10);
+  ctx.fillRect(8, 4, 10, 3);
+  ctx.fillRect(12, 1, 3, 10);
+  ctx.fillStyle = PALETTE.shirtDark;
+  ctx.fillRect(3, 11, 9, 4);
+  ctx.fillStyle = PALETTE.danger;
+  ctx.fillRect(10, 12, 4, 3);
+  ctx.restore();
+
+  ctx.restore();
+}
+
+function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number, deathT = 0) {
   const pos = visualPos(player);
   const { x, y } = gridToScreen(pos.col, pos.row);
   const facing = player.facing;
@@ -285,11 +361,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number)
   const cx = x + CELL / 2;
 
   if (dead) {
-    ctx.save();
-    ctx.translate(cx, y + CELL - 18);
-    box(ctx, -28, -10, 56, 16, PALETTE.shirt, PALETTE.shirt, PALETTE.shirtDark);
-    box(ctx, 18, -16, 20, 20, PALETTE.skin, PALETTE.skinLight, PALETTE.hair);
-    ctx.restore();
+    drawCrushedPlayer(ctx, x, y, facing, deathT);
     return;
   }
 

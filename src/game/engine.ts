@@ -217,12 +217,14 @@ function beginMove(
   col: number,
   row: number,
   dur: number,
+  carry = false,
 ) {
+  const leftover = carry ? Math.max(0, Math.min(0.92, actor.animT - 1)) : 0;
   actor.fromCol = actor.col;
   actor.fromRow = actor.row;
   actor.col = col;
   actor.row = row;
-  actor.animT = 0;
+  actor.animT = leftover;
   actor.animDur = dur;
   actor.moving = true;
 }
@@ -232,7 +234,6 @@ function stepAnim(actor: { animT: number; animDur: number; moving: boolean }, dt
   const dur = actor.animDur > 0 ? actor.animDur : 1;
   actor.animT += Math.max(0, dt) / dur;
   if (actor.animT >= 1) {
-    actor.animT = 1;
     actor.moving = false;
     return true;
   }
@@ -332,7 +333,7 @@ function applyCrateGravity(state: GameState) {
   for (const crate of ordered) {
     if (crate.moving) continue;
     if (supported(state, crate.col, crate.row, crate.id)) continue;
-    beginMove(crate, crate.col, crate.row - 1, CRATE_FALL_MS);
+    beginMove(crate, crate.col, crate.row - 1, CRATE_FALL_MS, true);
   }
 }
 
@@ -379,7 +380,19 @@ function killPlayer(state: GameState) {
   state.player.pose = "dead";
   state.player.moving = false;
   state.deathT = DEATH_MS;
-  state.shake = 10;
+  state.shake = 14;
+  state.flash = 0.55;
+  const p = state.player;
+  for (let i = 0; i < 14; i += 1) {
+    state.particles.push({
+      x: p.col + 0.5 + (Math.random() - 0.5) * 0.8,
+      y: p.row + 0.15 + Math.random() * 0.3,
+      vx: (Math.random() - 0.5) * 0.018,
+      vy: 0.004 + Math.random() * 0.014,
+      life: 420 + Math.random() * 260,
+      max: 700,
+    });
+  }
   sfx.crush();
   if (state.score > state.best) {
     state.best = state.score;
@@ -451,7 +464,7 @@ function playerGravity(state: GameState) {
   if (p.moving || p.pose === "dead") return;
   if (p.row <= 0) return;
   if (supported(state, p.col, p.row)) return;
-  beginMove(p, p.col, p.row - 1, FALL_MS);
+  beginMove(p, p.col, p.row - 1, FALL_MS, true);
   p.pose = "fall";
 }
 
@@ -630,8 +643,9 @@ function moveT(actor: {
   fromRow: number;
 }): number {
   const t = Math.max(0, Math.min(1, actor.animT));
-  const horizontal = actor.row === actor.fromRow && actor.col !== actor.fromCol;
-  if (horizontal) return t;
+  const falling = actor.col === actor.fromCol && actor.row < actor.fromRow;
+  const sliding = actor.row === actor.fromRow && actor.col !== actor.fromCol;
+  if (falling || sliding) return t;
   return t * t * (3 - 2 * t);
 }
 
