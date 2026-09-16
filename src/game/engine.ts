@@ -10,7 +10,9 @@ import {
   FALL_MS,
   HIGH_SCORE_KEY,
   CRANE_DROP_MS,
-  JUMP_AIR_MS,
+  CRUSH_HIT_ROW,
+  CRUSH_REST_ROW,
+  CRUSH_SETTLE_MS,
   JUMP_MS,
   MAX_CRANES,
   ORIGIN_X,
@@ -33,6 +35,9 @@ export type Crate = {
   animT: number;
   animDur: number;
   moving: boolean;
+  crushFrom?: number;
+  crushTo?: number;
+  crushT?: number;
 };
 
 export type Crane = {
@@ -333,13 +338,45 @@ function applyCrateGravity(state: GameState) {
   for (const crate of ordered) {
     if (crate.moving) continue;
     if (supported(state, crate.col, crate.row, crate.id)) continue;
-    beginMove(crate, crate.col, crate.row - 1, CRATE_FALL_MS, true);
+    const dest = crate.row - 1;
+    const ontoPlayer =
+      state.player.pose !== "dead" &&
+      !playerAirborne(state.player) &&
+      state.player.col === crate.col &&
+      state.player.row === dest;
+    beginMove(crate, crate.col, dest, CRATE_FALL_MS, !ontoPlayer);
   }
 }
 
 function crateOverlapsPlayer(state: GameState, crate: Crate): boolean {
   const p = state.player;
   return crate.col === p.col && crate.row === p.row;
+}
+
+function crateHitsPlayerHead(state: GameState, crate: Crate): boolean {
+  const p = state.player;
+  if (p.pose === "dead" || playerAirborne(p)) return false;
+  if (!crate.moving || crate.fromRow <= crate.row) return false;
+  const cv = visualPos(crate);
+  const pv = visualPos(p, p.pose === "jump");
+  if (Math.abs(cv.col - pv.col) > 0.42) return false;
+  if (crate.fromRow < pv.row + 0.45) return false;
+  if (cv.row < pv.row - 0.05) return false;
+  return cv.row <= pv.row + CRUSH_HIT_ROW;
+}
+
+function parkCrateOnPlayer(state: GameState, crate: Crate) {
+  const vis = visualPos(crate);
+  const rest = state.player.row + CRUSH_REST_ROW;
+  crate.moving = false;
+  crate.col = state.player.col;
+  crate.row = state.player.row;
+  crate.fromCol = vis.col;
+  crate.fromRow = vis.row;
+  crate.animT = 1;
+  crate.crushFrom = vis.row;
+  crate.crushTo = rest;
+  crate.crushT = vis.row <= rest ? 1 : 0;
 }
 
 function playerAirborne(player: Player): boolean {
@@ -365,20 +402,41 @@ function smashCrate(state: GameState, crate: Crate) {
 }
 
 function resolveCrateHit(state: GameState, crate: Crate): "smash" | "kill" | "none" {
-  if (!crateOverlapsPlayer(state, crate)) return "none";
   if (playerAirborne(state.player)) {
-    smashCrate(state, crate);
-    return "smash";
+    if (!crate.moving && crateOverlapsPlayer(state, crate)) {
+      smashCrate(state, crate);
+      return "smash";
+    }
+    return "none";
   }
-  killPlayer(state);
-  return "kill";
+  if (crateHitsPlayerHead(state, crate)) {
+    killPlayer(state, crate);
+    return "kill";
+  }
+  if (!crate.moving && crateOverlapsPlayer(state, crate)) {
+    killPlayer(state, crate);
+    return "kill";
+  }
+  return "none";
 }
 
-function killPlayer(state: GameState) {
+export function crateDrawInFront(state: GameState, crate: Crate): boolean {
+  if (crate.crushTo != null) return true;
+  const p = state.player;
+  const cv = visualPos(crate);
+  const pv = visualPos(p, p.pose === "jump");
+  if (Math.abs(cv.col - pv.col) > 0.5) return false;
+  if (p.pose === "dead" && crate.row >= p.row) return true;
+  if (!crate.moving || crate.fromRow <= crate.row) return false;
+  return cv.row < pv.row + 1.35 && cv.row > pv.row - 0.35;
+}
+
+function killPlayer(state: GameState, crate?: Crate) {
   if (state.phase !== "playing") return;
   state.phase = "dead";
   state.player.pose = "dead";
   state.player.moving = false;
+  if (crate) parkCrateOnPlayer(state, crate);
   state.deathT = DEATH_MS;
   state.shake = 14;
   state.flash = 0.55;
@@ -544,16 +602,13 @@ function interruptMove(state: GameState) {
 function hopInPlace(state: GameState) {
   const p = state.player;
   interruptMove(state);
-  const ny = p.row + 1;
-  if (inBounds(p.col, ny) && !blocked(state, p.col, ny)) {
-    beginMove(p, p.col, ny, JUMP_MS);
-  }
+  beginMove(p, p.col, p.row, JUMP_MS);
   startJumpPose(state);
 }
 
 function startJumpPose(state: GameState) {
   state.player.pose = "jump";
-  state.player.jumpT = JUMP_AIR_MS;
+  state.player.jumpT = state.player.animDur;
   sfx.jump();
 }
 
@@ -619,34 +674,42 @@ function updateParticles(state: GameState, dt: number) {
   state.popups = state.popups.filter((p) => p.life > 0);
 }
 
-export function visualPos(actor: {
-  col: number;
-  row: number;
-  fromCol: number;
-  fromRow: number;
-  animT: number;
-  moving: boolean;
-}): { col: number; row: number } {
+export function visualPos(
+  actor: {
+    col: number;
+    row: number;
+    fromCol: number;
+    fromRow: number;
+    animT: number;
+    moving: boolean;
+    crushFrom?: number;
+    crushTo?: number;
+    crushT?: number;
+  },
+  hop = false,
+): { col: number; row: number } {
+  if (actor.crushFrom != null && actor.crushTo != null) {
+    const t = Math.max(0, Math.min(1, actor.crushT ?? 0));
+    return {
+      col: actor.col,
+      row: actor.crushFrom + (actor.crushTo - actor.crushFrom) * t,
+    };
+  }
   if (!actor.moving) return { col: actor.col, row: actor.row };
-  const t = moveT(actor);
-  return {
-    col: actor.fromCol + (actor.col - actor.fromCol) * t,
-    row: actor.fromRow + (actor.row - actor.fromRow) * t,
-  };
+  const t = Math.max(0, Math.min(1, actor.animT));
+  const col = actor.fromCol + (actor.col - actor.fromCol) * t;
+  let row = actor.fromRow + (actor.row - actor.fromRow) * t;
+  if (hop) {
+    const climb = actor.row - actor.fromRow;
+    const arc = climb > 0.1 ? 0.68 : 0.42;
+    row += arc * 4 * t * (1 - t);
+  }
+  return { col, row };
 }
 
-function moveT(actor: {
-  animT: number;
-  col: number;
-  row: number;
-  fromCol: number;
-  fromRow: number;
-}): number {
-  const t = Math.max(0, Math.min(1, actor.animT));
-  const falling = actor.col === actor.fromCol && actor.row < actor.fromRow;
-  const sliding = actor.row === actor.fromRow && actor.col !== actor.fromCol;
-  if (falling || sliding) return t;
-  return t * t * (3 - 2 * t);
+function stepCrushSettle(crate: Crate, dt: number) {
+  if (crate.crushTo == null) return;
+  crate.crushT = Math.min(1, (crate.crushT ?? 0) + Math.max(0, dt) / CRUSH_SETTLE_MS);
 }
 
 export function updateGame(state: GameState, dt: number) {
@@ -659,7 +722,10 @@ export function updateGame(state: GameState, dt: number) {
 
   if (state.phase === "dead") {
     stepAnim(state.player, dt);
-    for (const crate of state.crates) stepAnim(crate, dt);
+    for (const crate of state.crates) {
+      if (crate.crushTo != null) stepCrushSettle(crate, dt);
+      else stepAnim(crate, dt);
+    }
     state.deathT -= dt;
     return;
   }
@@ -676,13 +742,14 @@ export function updateGame(state: GameState, dt: number) {
   settleGroundedPose(state.player);
 
   for (const crate of [...state.crates]) {
-    const done = stepAnim(crate, dt);
-    if (done && resolveCrateHit(state, crate) === "kill") return;
+    stepAnim(crate, dt);
+    if (resolveCrateHit(state, crate) === "kill") return;
   }
 
   const playerDone = stepAnim(state.player, dt);
   if (playerDone) {
     if (state.player.pose === "jump" || state.player.pose === "fall") sfx.land();
+    if (state.player.pose === "jump") state.player.jumpT = 0;
     if (state.player.pose !== "dead" && (state.player.pose === "fall" || state.player.jumpT <= 0)) {
       state.player.pose = "idle";
     }

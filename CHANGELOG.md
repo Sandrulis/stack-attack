@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3
+
+- Cilvēciņš ar navy hoodie, kantainu galvu un cepuri; lēciens uz kastes bez pauzes gaisā
+- Krītoša kaste saspiež no galvas, nevis cauri kājām
+- Vienāds augstums staigājot un apstājoties, kājas uz kastes bez spraugas
+
 ## v0.1.2
 
 - Kastēm tumša kvadrātveida maliņa un aizdare, lai saliktas kastes paliek atšķiramas

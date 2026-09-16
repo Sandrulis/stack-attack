@@ -10,13 +10,15 @@ export const ORIGIN_Y = 36;
 
 export const WALK_MS = 290;
 export const PUSH_MS = 400;
-export const JUMP_MS = 420;
+export const JUMP_MS = 360;
 export const FALL_MS = 260;
 export const CRATE_FALL_MS = 210;
 export const CRATE_SLIDE_MS = 400;
 export const EXPLODE_MS = 560;
 export const DEATH_MS = 900;
-export const JUMP_AIR_MS = 840;
+export const CRUSH_HIT_ROW = 0.85;
+export const CRUSH_REST_ROW = 0.2;
+export const CRUSH_SETTLE_MS = 160;
 export const CRANE_DROP_MS = 420;
 export const CRATE_SCALE = 1;
 
@@ -50,15 +52,22 @@ export const PALETTE = {
   crateBand: "#3a3a3a",
   gold: "#fcee4b",
   goldDark: "#c9a227",
-  skin: "#c48a5a",
-  skinLight: "#e0b080",
-  skinDark: "#9a6840",
-  hair: "#2a1a0c",
-  shirt: "#00aaaa",
-  shirtDark: "#007878",
-  pants: "#3c44aa",
-  pantsDark: "#2a3080",
-  shoe: "#2b2b2b",
+  skin: "#e8bc98",
+  skinLight: "#f6d7bd",
+  skinDark: "#c99270",
+  hair: "#b06c3a",
+  hairDark: "#7a4a28",
+  shirt: "#2f3650",
+  shirtLight: "#4a5470",
+  shirtDark: "#232838",
+  pants: "#2c3348",
+  pantsDark: "#1e2333",
+  hat: "#2a3148",
+  hatLight: "#4a5470",
+  hatDark: "#1a1e2c",
+  undershirt: "#efece8",
+  shoe: "#f4f5f7",
+  shoeDark: "#8b909a",
   crane: "#fcee4b",
   craneDark: "#8b8b8b",
   hook: "#c6c6c6",

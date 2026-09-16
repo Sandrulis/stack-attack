@@ -12,11 +12,47 @@ import {
   gridToScreen,
 } from "./constants";
 import type { GameState, Player } from "./engine";
-import { visualPos } from "./engine";
+import { crateDrawInFront, visualPos } from "./engine";
 
 function hash(n: number): number {
   const x = Math.sin(n * 12.9898) * 43758.5453;
   return x - Math.floor(x);
+}
+
+function roundBox(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+  mid: string,
+  light?: string,
+  dark?: string,
+) {
+  const rad = Math.max(0, Math.min(r, Math.abs(w) / 2, Math.abs(h) / 2));
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, h, rad);
+  ctx.fillStyle = mid;
+  ctx.fill();
+  if (light) {
+    ctx.beginPath();
+    ctx.roundRect(x, y, w, Math.max(2, Math.round(h * 0.18)), Math.min(rad, 4));
+    ctx.fillStyle = light;
+    ctx.fill();
+  }
+  if (dark) {
+    ctx.fillStyle = dark;
+    ctx.fillRect(x + w - Math.max(2, Math.round(w * 0.14)), y + rad * 0.3, Math.max(2, Math.round(w * 0.14)), h - rad * 0.6);
+    ctx.fillRect(x + 1, y + h - Math.max(2, Math.round(h * 0.12)), w - 2, Math.max(2, Math.round(h * 0.12)));
+  }
+}
+
+function oval(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, fill: string) {
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
 }
 
 function box(
@@ -51,10 +87,10 @@ export function drawGame(ctx: CanvasRenderingContext2D, state: GameState) {
   ctx.translate(shakeX, shakeY);
   drawWorld(ctx);
   drawCranes(ctx, state);
-  if (state.player.pose === "dead") drawPlayer(ctx, state.player, state.time, state.deathT);
-  drawCrates(ctx, state);
+  drawCrates(ctx, state, false);
+  drawPlayer(ctx, state.player, state.time, state.deathT);
+  drawCrates(ctx, state, true);
   if (state.phase === "exploding") drawExplosion(ctx, state);
-  if (state.player.pose !== "dead") drawPlayer(ctx, state.player, state.time, state.deathT);
   drawParticles(ctx, state);
   drawPopups(ctx, state);
   if (state.flash > 0) {
@@ -181,9 +217,10 @@ function drawCranes(ctx: CanvasRenderingContext2D, state: GameState) {
   }
 }
 
-function drawCrates(ctx: CanvasRenderingContext2D, state: GameState) {
+function drawCrates(ctx: CanvasRenderingContext2D, state: GameState, front: boolean) {
   const sorted = [...state.crates].sort((a, b) => b.row - a.row);
   for (const crate of sorted) {
+    if (crateDrawInFront(state, crate) !== front) continue;
     if (state.phase === "exploding" && crate.row === 0) continue;
     const pos = visualPos(crate);
     const { x, y } = gridToScreen(pos.col, pos.row);
@@ -241,8 +278,11 @@ function voxelLimb(
   ctx.save();
   ctx.translate(ox, oy);
   ctx.rotate(angle);
-  box(ctx, -w / 2, 0, w, len, mid, light, dark);
-  if (tip) box(ctx, -w / 2, len - 8, w, 8, tip, tip, dark);
+  roundBox(ctx, -w / 2, 0, w, len, w / 2, mid, light, dark);
+  if (tip) {
+    roundBox(ctx, -w / 2 - 1, len - 9, w + 2, 11, 5, tip, "#fff", PALETTE.shoeDark);
+    roundBox(ctx, -w / 2, len - 2, w, 4, 2, PALETTE.shoeDark);
+  }
   ctx.restore();
 }
 
@@ -264,11 +304,78 @@ function voxelArm(
   ctx.save();
   ctx.translate(ox, oy);
   ctx.rotate(upperAngle);
-  box(ctx, -w / 2, 0, w, upperLen, sleeve, sleeveLight, sleeveDark);
+  roundBox(ctx, -w / 2, 0, w, upperLen, w / 2, sleeve, sleeveLight, sleeveDark);
   ctx.translate(0, upperLen - 4);
   ctx.rotate(elbowBend);
-  box(ctx, -w / 2, 0, w, lowerLen - 8, PALETTE.skin, PALETTE.skinLight, skinDark);
-  box(ctx, -w / 2 - 1, lowerLen - 10, w + 2, 10, skin, PALETTE.skinLight, skinDark);
+  roundBox(ctx, -w / 2, 0, w, lowerLen - 8, w / 2, PALETTE.skin, PALETTE.skinLight, skinDark);
+  roundBox(ctx, -w / 2 - 1, lowerLen - 11, w + 2, 12, 6, skin, PALETTE.skinLight, skinDark);
+  ctx.restore();
+}
+
+function drawXEye(ctx: CanvasRenderingContext2D, cx: number, cy: number) {
+  ctx.strokeStyle = "#2a241c";
+  ctx.lineWidth = 2.1;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(cx - 3.4, cy - 3.2);
+  ctx.lineTo(cx + 3.4, cy + 3.2);
+  ctx.moveTo(cx + 3.4, cy - 3.2);
+  ctx.lineTo(cx - 3.4, cy + 3.2);
+  ctx.stroke();
+}
+
+function drawCap(ctx: CanvasRenderingContext2D) {
+  roundBox(ctx, -15, 0, 30, 12, 3, PALETTE.hat, PALETTE.hatLight, PALETTE.hatDark);
+  roundBox(ctx, 5, 8, 17, 5, 2, PALETTE.hat, PALETTE.hatLight, PALETTE.hatDark);
+  roundBox(ctx, 2, 3, 7, 4, 1, PALETTE.undershirt);
+  roundBox(ctx, -2, -1, 4, 3, 1, PALETTE.hatLight);
+}
+
+function drawKidHead(ctx: CanvasRenderingContext2D, crushed: boolean, squash = 0) {
+  ctx.save();
+  ctx.scale(1, 1 - squash * 0.2);
+
+  roundBox(ctx, -16, 8, 10, 12, 2, PALETTE.hair, PALETTE.hair, PALETTE.hairDark);
+  roundBox(ctx, 10, 7, 10, 12, 2, PALETTE.hair, PALETTE.hair, PALETTE.hairDark);
+  roundBox(ctx, -14, 16, 8, 10, 2, PALETTE.hairDark);
+
+  roundBox(ctx, -17, 12, 5, 8, 2, PALETTE.skin, PALETTE.skinLight, PALETTE.skinDark);
+  roundBox(ctx, -14, 4, 30, 26, 4, PALETTE.skin, PALETTE.skinLight, PALETTE.skinDark);
+
+  if (crushed) {
+    drawXEye(ctx, -4, 16);
+    drawXEye(ctx, 8, 16);
+    ctx.fillStyle = PALETTE.danger;
+    roundBox(ctx, 3, 22, 8, 4, 1, PALETTE.danger);
+  } else {
+    roundBox(ctx, -6, 12, 7, 8, 2, "#fff");
+    roundBox(ctx, -4, 14, 3, 4, 1, "#2a241c");
+    roundBox(ctx, 4, 12, 8, 8, 2, "#fff");
+    roundBox(ctx, 7, 14, 3, 4, 1, "#2a241c");
+    roundBox(ctx, -4, 13, 2, 2, 1, "#fff");
+    roundBox(ctx, 8, 13, 2, 2, 1, "#fff");
+
+    ctx.strokeStyle = PALETTE.hairDark;
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "square";
+    ctx.beginPath();
+    ctx.moveTo(-6, 10);
+    ctx.lineTo(0, 11);
+    ctx.moveTo(5, 10);
+    ctx.lineTo(12, 9);
+    ctx.stroke();
+
+    roundBox(ctx, 4, 18, 4, 3, 1, PALETTE.skinDark);
+
+    ctx.strokeStyle = PALETTE.skinDark;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(2, 22);
+    ctx.lineTo(9, 22);
+    ctx.stroke();
+  }
+
+  drawCap(ctx);
   ctx.restore();
 }
 
@@ -280,81 +387,76 @@ function drawCrushedPlayer(
   deathT: number,
 ) {
   const elapsed = Math.max(0, DEATH_MS - deathT);
-  const squash = Math.min(1, elapsed / 180);
+  const squash = Math.min(1, elapsed / 200);
   const k = squash * squash * (3 - 2 * squash);
-  const pop = Math.min(1, Math.max(0, (elapsed - 70) / 160));
+  const pop = Math.min(1, Math.max(0, (elapsed - 40) / 180));
   const wobble = pop > 0.95 ? Math.sin(elapsed / 55) * 1.2 : 0;
 
   ctx.save();
+  ctx.imageSmoothingEnabled = true;
   ctx.translate(x + CELL / 2 + wobble, y + CELL);
 
   ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
-  ctx.fillRect(-36, -7, 72, 6);
+  ctx.beginPath();
+  ctx.ellipse(0, -4, 38, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-  const shoeSpread = 16 + k * 12;
-  box(ctx, -shoeSpread - 12, -9, 16, 8, PALETTE.shoe, PALETTE.shoe, PALETTE.grout);
-  box(ctx, shoeSpread - 4, -9, 16, 8, PALETTE.shoe, PALETTE.shoe, PALETTE.grout);
+  const shoeSpread = 8 + k * 20;
+  roundBox(ctx, -shoeSpread - 12, -9, 16, 8, 4, PALETTE.shoe, "#fff", PALETTE.shoeDark);
+  roundBox(ctx, shoeSpread - 4, -9, 16, 8, 4, PALETTE.shoe, "#fff", PALETTE.shoeDark);
 
-  const pantsW = 22 + k * 26;
-  box(ctx, -pantsW / 2, -14, pantsW, 8 - k * 2, PALETTE.pants, PALETTE.pants, PALETTE.pantsDark);
+  const pantsW = 20 + k * 28;
+  const pantsH = 20 - k * 14;
+  roundBox(ctx, -pantsW / 2, -9 - pantsH, pantsW, pantsH, 8, PALETTE.pants, PALETTE.pants, PALETTE.pantsDark);
 
-  const shirtW = 26 + k * 30;
-  box(ctx, -shirtW / 2, -20 + k * 4, shirtW, 12 - k * 4, PALETTE.shirt, PALETTE.shirt, PALETTE.shirtDark);
+  const shirtW = 22 + k * 34;
+  const shirtH = 24 - k * 16;
+  const shirtY = -9 - pantsH - shirtH + k * 6;
+  roundBox(ctx, -shirtW / 2, shirtY, shirtW, shirtH, 8, PALETTE.shirt, PALETTE.shirtLight, PALETTE.shirtDark);
+  roundBox(ctx, -shirtW / 2 + 2, shirtY + shirtH - 5, shirtW - 4, 4, 2, PALETTE.undershirt);
 
   voxelLimb(
     ctx,
     -shirtW / 2 + 2,
-    -16,
-    1.35,
+    shirtY + shirtH * 0.35,
+    0.35 + k * 1.0,
     8,
-    14 + pop * 8,
+    22 - k * 6,
     PALETTE.shirt,
-    PALETTE.skinLight,
+    PALETTE.shirtLight,
     PALETTE.shirtDark,
     PALETTE.skin,
   );
   voxelLimb(
     ctx,
     shirtW / 2 - 2,
-    -16,
-    -1.35,
+    shirtY + shirtH * 0.35,
+    -0.35 - k * 1.0,
     8,
-    14 + pop * 8,
+    22 - k * 6,
     PALETTE.shirt,
-    PALETTE.skinLight,
+    PALETTE.shirtLight,
     PALETTE.shirtDark,
     PALETTE.skin,
   );
 
-  const headX = facing * (22 + pop * 18);
-  const headY = -20 + (1 - k) * -28;
+  const headX = facing * (6 + pop * 34);
+  const headY = shirtY - 4 - (1 - k) * 18;
   ctx.save();
   ctx.translate(headX, headY);
-  ctx.scale(facing, 1 - k * 0.18);
-  box(ctx, -13, -13, 26, 24, PALETTE.skin, PALETTE.skinLight, PALETTE.skinDark);
-  ctx.fillStyle = PALETTE.hair;
-  ctx.fillRect(-13, -13, 26, 9);
-  ctx.fillRect(-13, -13, 8, 17);
-  ctx.fillStyle = "#3b2314";
-  ctx.fillRect(0, 1, 10, 3);
-  ctx.fillRect(3, -2, 3, 10);
-  ctx.fillRect(8, 4, 10, 3);
-  ctx.fillRect(12, 1, 3, 10);
-  ctx.fillStyle = PALETTE.shirtDark;
-  ctx.fillRect(3, 11, 9, 4);
-  ctx.fillStyle = PALETTE.danger;
-  ctx.fillRect(10, 12, 4, 3);
+  ctx.scale(facing, 1);
+  drawKidHead(ctx, true, k);
   ctx.restore();
 
   ctx.restore();
 }
 
 function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number, deathT = 0) {
-  const pos = visualPos(player);
+  const pos = visualPos(player, player.pose === "jump");
   const { x, y } = gridToScreen(pos.col, pos.row);
   const facing = player.facing;
   const walking = player.pose === "walk" || player.walkHold > 0;
-  const jump = player.pose === "jump" || player.jumpT > 0;
+  const jump = player.pose === "jump" && player.moving;
   const push = player.pose === "push" || player.pushHold > 0;
   const fall = player.pose === "fall";
   const dead = player.pose === "dead";
@@ -366,41 +468,45 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number,
   }
 
   const stride = pos.col * Math.PI;
-  const sw = walking && !push ? Math.sin(stride) * 0.55 : 0;
-  const bob = jump ? -14 : push ? Math.sin(time / 170) * 1.6 : walking ? Math.abs(Math.cos(stride)) * 2 : 0;
+  const sw = walking && !push ? Math.sin(stride) * 0.7 : 0;
   const strain = Math.sin(time / 180);
 
-  let leftLeg = 0.06;
-  let rightLeg = -0.04;
-  let leftArm = -0.08;
-  let rightArm = 0.08;
+  let leftLeg = 0;
+  let rightLeg = 0;
+  let leftArm = 0;
+  let rightArm = 0;
 
   if (push) {
-    leftLeg = 0.34 + strain * 0.1;
-    rightLeg = -0.28 - strain * 0.08;
+    leftLeg = 0.42 + strain * 0.1;
+    rightLeg = -0.34 - strain * 0.08;
   } else if (walking) {
     leftLeg = sw;
     rightLeg = -sw;
-    leftArm = -sw * 0.9;
-    rightArm = sw * 0.9;
+    leftArm = -sw * 0.85;
+    rightArm = sw * 0.85;
   } else if (jump || fall) {
-    leftLeg = -0.45;
-    rightLeg = 0.45;
-    leftArm = -2.4;
-    rightArm = -2.2;
+    leftLeg = 0.72;
+    rightLeg = -0.62;
+    leftArm = 0.55;
+    rightArm = -1.85;
   }
 
   ctx.save();
-  ctx.translate(cx, y + CELL - 4 + bob);
+  ctx.imageSmoothingEnabled = true;
+  ctx.translate(cx, y + CELL + 2);
   ctx.scale(facing * 1.12, 1.12);
   if (push) {
-    ctx.translate(8, 3);
-    ctx.rotate(-0.16);
+    ctx.translate(8, 4);
+    ctx.rotate(-0.22);
+  } else if (jump || fall) {
+    ctx.rotate(-0.18);
   }
   ctx.translate(0, -76);
 
   ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
-  ctx.fillRect(-12, 74, 24, 5);
+  ctx.beginPath();
+  ctx.ellipse(0, 76, 13, 3.2, 0, 0, Math.PI * 2);
+  ctx.fill();
 
   if (push) {
     voxelArm(
@@ -413,20 +519,24 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number,
       16,
       22,
       PALETTE.shirt,
-      PALETTE.skinLight,
+      PALETTE.shirtLight,
       PALETTE.shirtDark,
       PALETTE.skin,
       PALETTE.skinDark,
     );
   } else {
-    voxelLimb(ctx, -6, 22, leftArm, 10, 28, PALETTE.shirt, PALETTE.skinLight, PALETTE.shirtDark, PALETTE.skin);
+    voxelLimb(ctx, -6, 22, leftArm, 10, 28, PALETTE.shirt, PALETTE.shirtLight, PALETTE.shirtDark, PALETTE.skin);
   }
-  voxelLimb(ctx, -5, 44, leftLeg, 10, 30, PALETTE.pants, PALETTE.pants, PALETTE.pantsDark, PALETTE.shoe);
+  voxelLimb(ctx, -5, 44, leftLeg, 10, 30, PALETTE.pants, PALETTE.shirtLight, PALETTE.pantsDark, PALETTE.shoe);
 
-  box(ctx, -10, 20, 20, 26, PALETTE.shirt, PALETTE.shirt, PALETTE.shirtDark);
-  box(ctx, -10, 42, 20, 8, PALETTE.pants, PALETTE.pants, PALETTE.pantsDark);
+  oval(ctx, -8, 18, 8, 8, PALETTE.shirt);
+  roundBox(ctx, -12, 22, 24, 28, 9, PALETTE.shirt, PALETTE.shirtLight, PALETTE.shirtDark);
+  roundBox(ctx, -7, 30, 14, 9, 4, PALETTE.shirtDark);
+  roundBox(ctx, -8, 46, 16, 5, 2, PALETTE.undershirt);
+  roundBox(ctx, -11, 48, 22, 10, 5, PALETTE.pants, PALETTE.shirtLight, PALETTE.pantsDark);
+  roundBox(ctx, 2, 52, 8, 7, 2, PALETTE.shirtDark);
 
-  voxelLimb(ctx, 5, 44, rightLeg, 10, 30, PALETTE.pants, PALETTE.pants, PALETTE.pantsDark, PALETTE.shoe);
+  voxelLimb(ctx, 5, 44, rightLeg, 10, 30, PALETTE.pants, PALETTE.shirtLight, PALETTE.pantsDark, PALETTE.shoe);
   if (push) {
     voxelArm(
       ctx,
@@ -438,28 +548,16 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number,
       15,
       24,
       PALETTE.shirt,
-      PALETTE.skinLight,
+      PALETTE.shirtLight,
       PALETTE.shirtDark,
       PALETTE.skin,
       PALETTE.skinDark,
     );
   } else {
-    voxelLimb(ctx, 6, 22, rightArm, 10, 28, PALETTE.shirt, PALETTE.skinLight, PALETTE.shirtDark, PALETTE.skin);
+    voxelLimb(ctx, 6, 22, rightArm, 10, 28, PALETTE.shirt, PALETTE.shirtLight, PALETTE.shirtDark, PALETTE.skin);
   }
 
-  box(ctx, -11, 0, 22, 22, PALETTE.skin, PALETTE.skinLight, PALETTE.skinDark);
-  ctx.fillStyle = PALETTE.hair;
-  ctx.fillRect(-11, 0, 22, 8);
-  ctx.fillRect(-11, 0, 6, 16);
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(5, 10, 5, 5);
-  ctx.fillStyle = "#3b2314";
-  ctx.fillRect(7, 12, 3, 3);
-  ctx.fillStyle = PALETTE.skinDark;
-  ctx.fillRect(9, 15, 3, 3);
-  ctx.fillStyle = PALETTE.shoe;
-  ctx.fillRect(8, 17, 5, 2);
-
+  drawKidHead(ctx, false);
   ctx.restore();
 }
 
