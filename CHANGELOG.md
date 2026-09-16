@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.9
+
+- Spēles lauks 6×10, septīto rindu ved tikai telferis; bez vietas telferis riņķo, līdz nomet
+- Līdz 4 telferiem; ik pa laikam negaiss ar lietu, pēc rekorda paliek saulriets ar sauli pa pusei
+
 ## v0.1.8
 
 - Augšējā rindā ar lēcienu var uzmest kasti sānis, tajā pašā līmenī ar telfera kasti

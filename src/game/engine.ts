@@ -15,6 +15,7 @@ import {
   JUMP_MS,
   MAX_CRANES,
   ORIGIN_X,
+  ORIGIN_Y,
   PUSH_MS,
   ROWS,
   WALK_MS,
@@ -87,6 +88,13 @@ export type SkyCloud = {
   puffs: number;
 };
 
+export type RainDrop = {
+  x: number;
+  y: number;
+  vy: number;
+  len: number;
+};
+
 export type GameState = {
   phase: Phase;
   player: Player;
@@ -96,6 +104,11 @@ export type GameState = {
   popups: Popup[];
   skyClouds: SkyCloud[];
   cloudWait: number;
+  rain: RainDrop[];
+  storm: number;
+  stormWait: number;
+  stormHold: number;
+  stormFlash: number;
   score: number;
   best: number;
   recordAtStart: number;
@@ -206,6 +219,67 @@ function updateSkyClouds(state: GameState, dt: number) {
   state.skyClouds = state.skyClouds.filter((cloud) => cloud.x > -320 && cloud.x < CANVAS_W + 320);
 }
 
+function nextStormWait(): number {
+  return 22000 + Math.random() * 40000;
+}
+
+function spawnRainDrop(anywhere = false): RainDrop {
+  return {
+    x: Math.random() * CANVAS_W,
+    y: anywhere ? Math.random() * 280 : -24 - Math.random() * 90,
+    vy: 0.52 + Math.random() * 0.38,
+    len: 9 + Math.random() * 16,
+  };
+}
+
+function updateWeather(state: GameState, dt: number) {
+  if (state.sunset > 0.04) {
+    state.stormHold = 0;
+    state.storm = Math.max(0, state.storm - dt / 700);
+    state.stormFlash = Math.max(0, state.stormFlash - dt * 0.01);
+    if (state.storm <= 0) state.rain = [];
+    else updateRain(state, dt);
+    return;
+  }
+  if (state.stormHold > 0) {
+    state.stormHold -= dt;
+    state.storm = Math.min(1, state.storm + dt / 900);
+    if (state.storm > 0.55 && Math.random() < dt * 0.0014) state.stormFlash = 1;
+  } else if (state.storm > 0) {
+    state.storm = Math.max(0, state.storm - dt / 1100);
+    if (state.storm <= 0) {
+      state.rain = [];
+      state.stormWait = nextStormWait();
+    }
+  } else {
+    state.stormWait -= dt;
+    if (state.stormWait <= 0) {
+      state.stormHold = 8000 + Math.random() * 10000;
+      state.stormWait = nextStormWait();
+    }
+  }
+  state.stormFlash = Math.max(0, state.stormFlash - dt * 0.008);
+  updateRain(state, dt);
+}
+
+function updateRain(state: GameState, dt: number) {
+  if (state.storm < 0.05) {
+    state.rain = [];
+    return;
+  }
+  const want = Math.floor(64 * state.storm);
+  while (state.rain.length < want) state.rain.push(spawnRainDrop(state.rain.length < 12));
+  if (state.rain.length > want) state.rain.length = want;
+  for (const drop of state.rain) {
+    drop.y += drop.vy * dt;
+    if (drop.y > ORIGIN_Y + ROWS * CELL) {
+      drop.x = Math.random() * CANVAS_W;
+      drop.y = -24 - Math.random() * 70;
+      drop.vy = 0.52 + Math.random() * 0.38;
+    }
+  }
+}
+
 export function createGame(): GameState {
   return {
     phase: "title",
@@ -216,6 +290,11 @@ export function createGame(): GameState {
     popups: [],
     skyClouds: [spawnSkyCloud(true), spawnSkyCloud(true)],
     cloudWait: 1800 + Math.random() * 2400,
+    rain: [],
+    storm: 0,
+    stormWait: nextStormWait(),
+    stormHold: 0,
+    stormFlash: 0,
     score: 0,
     best: loadBest(),
     recordAtStart: loadBest(),
@@ -239,6 +318,11 @@ export function startRun(state: GameState) {
   state.score = 0;
   state.recordAtStart = state.best;
   state.sunset = 0;
+  state.rain = [];
+  state.storm = 0;
+  state.stormWait = nextStormWait();
+  state.stormHold = 0;
+  state.stormFlash = 0;
   state.shake = 0;
   state.flash = 0;
   state.explodeT = 0;
@@ -376,6 +460,26 @@ function syncCraneCount(state: GameState) {
   }
 }
 
+function retargetDrop(state: GameState, crane: Crane) {
+  const next = randomFreeCol(
+    state,
+    state.cranes.map((item) => item.dropCol),
+  );
+  if (next !== null) crane.dropCol = next;
+}
+
+function bounceLoadedCrane(state: GameState, crane: Crane) {
+  if (crane.dir < 0 && crane.x <= 0.02) {
+    crane.x = 0.02;
+    crane.dir = 1;
+    retargetDrop(state, crane);
+  } else if (crane.dir > 0 && crane.x >= COLS - 1.02) {
+    crane.x = COLS - 1.02;
+    crane.dir = -1;
+    retargetDrop(state, crane);
+  }
+}
+
 function updateCranes(state: GameState, dt: number) {
   syncCraneCount(state);
   const speed = 1.28 + state.score * 0.008;
@@ -398,21 +502,21 @@ function updateCranes(state: GameState, dt: number) {
       if (atDrop && !topBusy(state, crane.dropCol)) {
         crane.dropping = CRANE_DROP_MS;
       } else {
+        if (topBusy(state, crane.dropCol)) retargetDrop(state, crane);
         const passed = crane.dir < 0 ? crane.x < crane.dropCol - 0.45 : crane.x > crane.dropCol + 0.45;
         if (passed) {
-          const next = randomFreeCol(
-            state,
-            state.cranes.map((item) => item.dropCol),
-          );
-          if (next !== null && (crane.dir < 0 ? next < crane.x : next > crane.x)) {
-            crane.dropCol = next;
-          }
+          retargetDrop(state, crane);
+          const behind = crane.dir < 0 ? crane.dropCol > crane.x + 0.2 : crane.dropCol < crane.x - 0.2;
+          if (behind) crane.dir = crane.dir < 0 ? 1 : -1;
         }
       }
     }
 
-    const offscreen = crane.dir < 0 ? crane.x < craneLeftX() : crane.x > craneRightX();
-    if (offscreen) recycleCrane(state, crane);
+    if (crane.carrying || crane.dropping > 0) bounceLoadedCrane(state, crane);
+    else {
+      const offscreen = crane.dir < 0 ? crane.x < craneLeftX() : crane.x > craneRightX();
+      if (offscreen) recycleCrane(state, crane);
+    }
   }
 }
 
@@ -876,7 +980,10 @@ export function updateGame(state: GameState, dt: number) {
     state.sunset = Math.min(1, state.sunset + dt / 1100);
   }
   updateParticles(state, dt);
-  if (state.phase !== "paused") updateSkyClouds(state, dt);
+  if (state.phase !== "paused") {
+    updateSkyClouds(state, dt);
+    updateWeather(state, dt);
+  }
 
   if (state.phase === "title" || state.phase === "paused") return;
 

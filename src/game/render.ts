@@ -153,9 +153,10 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
   const count = 3;
   const totalW = CANVAS_W - pad * 2;
   const winW = (totalW - gaps * (count - 1)) / count;
-  const winH = ROWS * CELL * 0.52;
-  const winY = ORIGIN_Y + 10;
+  const winH = (ROWS * CELL + CELL) * 0.52;
+  const winY = ORIGIN_Y - CELL + 10;
   const t = Math.max(0, Math.min(1, state.sunset));
+  const storm = Math.max(0, Math.min(1, state.storm)) * (1 - t);
   for (let i = 0; i < count; i += 1) {
     const x = pad + i * (winW + gaps);
     box(ctx, x - 6, winY - 6, winW + 12, winH + 12, PALETTE.windowFrame, PALETTE.iron, PALETTE.grout);
@@ -168,6 +169,20 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
     day.addColorStop(1, PALETTE.skyBottom);
     ctx.fillStyle = day;
     ctx.fillRect(x, winY, winW, winH);
+    if (storm > 0) {
+      ctx.globalAlpha = storm;
+      const dusk = ctx.createLinearGradient(x, winY, x, winY + winH);
+      dusk.addColorStop(0, "#151b28");
+      dusk.addColorStop(0.45, "#2a3346");
+      dusk.addColorStop(1, "#3d4558");
+      ctx.fillStyle = dusk;
+      ctx.fillRect(x, winY, winW, winH);
+      if (state.stormFlash > 0) {
+        ctx.fillStyle = `rgba(235, 245, 255, ${0.42 * state.stormFlash})`;
+        ctx.fillRect(x, winY, winW, winH);
+      }
+      ctx.globalAlpha = 1;
+    }
     if (t > 0) {
       ctx.globalAlpha = t;
       const dusk = ctx.createLinearGradient(x, winY, x, winY + winH);
@@ -180,9 +195,11 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
       drawSunsetSun(ctx, winY, winH);
       ctx.globalAlpha = 1;
     }
-    drawWindowClouds(ctx, state, winY);
+    drawWindowClouds(ctx, state, winY, storm);
+    drawRain(ctx, state, storm);
     ctx.restore();
-    ctx.fillStyle = t > 0 ? `rgba(255, 140, 80, ${0.12 * t})` : PALETTE.glass;
+    ctx.fillStyle =
+      t > 0 ? `rgba(255, 140, 80, ${0.12 * t})` : storm > 0.12 ? `rgba(30, 40, 58, ${0.2 * storm})` : PALETTE.glass;
     ctx.fillRect(x, winY, winW, winH);
     ctx.fillStyle = PALETTE.glassEdge;
     ctx.fillRect(x, winY, winW, 8);
@@ -192,7 +209,10 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
   }
 }
 
-function drawWindowClouds(ctx: CanvasRenderingContext2D, state: GameState, winY: number) {
+function drawWindowClouds(ctx: CanvasRenderingContext2D, state: GameState, winY: number, storm: number) {
+  const mid = storm > 0.15 ? "#8b93a3" : "#ffffff";
+  const light = storm > 0.15 ? "#a8b0be" : "#ffffff";
+  const dark = storm > 0.15 ? "#5c6473" : PALETTE.cloudDark;
   for (const cloud of state.skyClouds) {
     const s = cloud.scale;
     const gap = 16 * s;
@@ -201,7 +221,7 @@ function drawWindowClouds(ctx: CanvasRenderingContext2D, state: GameState, winY:
     for (let i = 0; i < cloud.puffs; i += 1) {
       const px = cloud.x + i * gap;
       const py = winY + cloud.y + (i % 2) * (7 * s);
-      box(ctx, px, py, puffW, puffH, "#ffffff", "#ffffff", PALETTE.cloudDark);
+      box(ctx, px, py, puffW, puffH, mid, light, dark);
     }
     for (let i = 1; i < cloud.puffs - 1; i += 1) {
       box(
@@ -210,17 +230,29 @@ function drawWindowClouds(ctx: CanvasRenderingContext2D, state: GameState, winY:
         winY + cloud.y - 10 * s,
         puffW * 0.82,
         puffH * 0.85,
-        "#ffffff",
-        "#ffffff",
-        PALETTE.cloudDark,
+        mid,
+        light,
+        dark,
       );
     }
   }
 }
 
+function drawRain(ctx: CanvasRenderingContext2D, state: GameState, storm: number) {
+  if (storm < 0.05) return;
+  ctx.strokeStyle = `rgba(200, 220, 245, ${0.38 + 0.28 * storm})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (const drop of state.rain) {
+    ctx.moveTo(drop.x, drop.y);
+    ctx.lineTo(drop.x - 3, drop.y + drop.len);
+  }
+  ctx.stroke();
+}
+
 function drawSunsetSun(ctx: CanvasRenderingContext2D, winY: number, winH: number) {
   const cx = CANVAS_W * 0.55;
-  const cy = winY + winH * 0.82;
+  const cy = winY + winH + 6;
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   ctx.fillStyle = "rgba(255, 90, 40, 0.28)";
@@ -243,7 +275,7 @@ function drawSunsetSun(ctx: CanvasRenderingContext2D, winY: number, winH: number
 }
 
 function drawRails(ctx: CanvasRenderingContext2D) {
-  const y = ORIGIN_Y - 28;
+  const y = ORIGIN_Y - CELL - 28;
   ctx.fillStyle = PALETTE.grout;
   ctx.fillRect(0, y + 6, CANVAS_W, 10);
   ctx.fillStyle = PALETTE.ironDark;
@@ -272,7 +304,7 @@ function drawCranes(ctx: CanvasRenderingContext2D, state: GameState) {
   for (const crane of state.cranes) {
     const x = ORIGIN_X + crane.x * CELL;
     if (x < -CELL * 1.4 || x > CANVAS_W + CELL * 1.4) continue;
-    const railY = ORIGIN_Y - 40;
+    const railY = ORIGIN_Y - CELL - 40;
     ctx.save();
     if (crane.dir > 0) {
       ctx.translate(x + CELL / 2, 0);

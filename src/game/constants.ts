@@ -1,12 +1,12 @@
 export const COLS = 10;
-export const ROWS = 7;
+export const ROWS = 6;
 export const CELL = 80;
 
 export const CANVAS_W = 800;
 export const CANVAS_H = 640;
 
 export const ORIGIN_X = 0;
-export const ORIGIN_Y = 36;
+export const ORIGIN_Y = 36 + CELL;
 
 export const WALK_MS = 290;
 export const PUSH_MS = 400;
@@ -22,7 +22,7 @@ export const CRUSH_SETTLE_MS = 160;
 export const CRANE_DROP_MS = 420;
 export const CRATE_SCALE = 1;
 
-export const MAX_CRANES = 5;
+export const MAX_CRANES = 4;
 export const HIGH_SCORE_KEY = "stack-attack-highscore";
 
 export const PALETTE = {
@@ -86,7 +86,6 @@ export function gridToScreen(col: number, row: number): { x: number; y: number }
 }
 
 export function craneThreshold(score: number): number {
-  if (score >= 90) return 5;
   if (score >= 65) return 4;
   if (score >= 45) return 3;
   if (score >= 18) return 2;
