@@ -1,6 +1,6 @@
 # Stack Attack
 
-**Current version:** `0.1.7`
+**Current version:** `0.1.8`
 
 **Stack Attack** stila 2D spēle pārlūkā. Cilvēciņš stumj kastes, telferis tās met no augšas visā laukuma platumā, un pilna apakšējā rinda pazūd ar +1 punktu.
 
@@ -27,7 +27,7 @@ Atver [http://localhost:3177](http://localhost:3177).
 
 ## Spēles noteikumi
 
-- Telferi brauc pa sliedi visā ekrāna platumā (ar vairākiem - arī abos virzienos) un randomā nomet kastes.
+- Telferi brauc pa sliedi visā ekrāna platumā (ar vairākiem - arī abos virzienos) un randomā nomet kastes. Pēc nomešanas tukšais telferis aizbrauc divreiz ātrāk.
 - Kastes krīt, līdz atduras pret grīdu vai citu kasti.
 - Cilvēciņu var saspiest krītoša kaste - tad spēle beidzas.
 - Kad apakšējā rinda ir pilna, tā pazūd uzreiz, spēle neapstājas, kastes virs tās krīt uz leju, un tiek pieskaitīts **1 punkts**.

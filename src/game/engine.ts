@@ -380,8 +380,8 @@ function updateCranes(state: GameState, dt: number) {
   syncCraneCount(state);
   const speed = 1.28 + state.score * 0.008;
   for (const crane of state.cranes) {
-    const slow = crane.dropping > 0 ? 0.55 : 1;
-    crane.x += (crane.dir * speed * slow * dt) / 1000;
+    const pace = crane.dropping > 0 ? 0.55 : crane.carrying ? 1 : 2;
+    crane.x += (crane.dir * speed * pace * dt) / 1000;
 
     if (crane.dropping > 0) {
       crane.dropping -= dt;
@@ -800,6 +800,7 @@ function directedJump(state: GameState, dir: Dir): boolean {
   if (climbCrate && climbOntoCrate(state, climbCrate, nx)) return true;
   const stacked = climbCrate ? crateAt(state, nx, climbCrate.row + 1) : crateAt(state, nx, feet + 1);
   if (stacked && crateCanPush(state, stacked, dir)) return jumpPushCrate(state, stacked, dir, nx);
+  if (climbCrate && crateCanPush(state, climbCrate, dir)) return jumpPushCrate(state, climbCrate, dir, nx);
   return tryLeap(state, dir);
 }
 

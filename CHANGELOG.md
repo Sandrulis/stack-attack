@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.8
+
+- Augšējā rindā ar lēcienu var uzmest kasti sānis, tajā pašā līmenī ar telfera kasti
+- Pēc nomešanas tukšais telferis aizbrauc divreiz ātrāk
+
 ## v0.1.7
 
 - Aiz noliktavas logiem ik pa laikam peld balti, gubaini mākoņi dažādos izmēros
