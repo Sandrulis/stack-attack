@@ -9,7 +9,7 @@ import {
   RIGHT_KEYS,
 } from "./input";
 import { bindJoystick, isTouchDevice } from "./joystick";
-import { STR, type Lang } from "./i18n";
+import { STR } from "./i18n";
 import { CANVAS_H, CANVAS_W, MAX_CRANES } from "./game/constants";
 import {
   createGame,
@@ -25,7 +25,6 @@ import { drawGame } from "./game/render";
 
 const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const overlay = document.querySelector<HTMLElement>("#overlay")!;
-const langBtn = document.querySelector<HTMLButtonElement>("#lang-btn")!;
 const pauseBtn = document.querySelector<HTMLButtonElement>("#pause-btn")!;
 const scoreEl = document.querySelector("#score")!;
 const bestEl = document.querySelector("#best")!;
@@ -42,16 +41,14 @@ const joystickEl = document.querySelector<HTMLElement>("#joystick")!;
 const knobEl = document.querySelector<HTMLElement>("#joystick-knob")!;
 const jumpBtn = document.querySelector<HTMLButtonElement>("#jump-btn")!;
 const readStick = bindJoystick(joystickEl, knobEl, jumpBtn);
-let lang: Lang = "lv";
 let last = performance.now();
 let overlayKey = "";
 let pendingJump: -1 | 0 | 1 | null = null;
 let pendingJumpUntil = 0;
 
 function syncCopy() {
-  const t = STR[lang];
-  langBtn.textContent = lang === "lv" ? "EN" : "LV";
-  document.documentElement.lang = lang;
+  const t = STR;
+  document.documentElement.lang = "en";
   document.querySelector("#subtitle")!.textContent = t.subtitle;
   document.querySelector("#score-label")!.textContent = t.score;
   document.querySelector("#best-label")!.textContent = t.best;
@@ -59,7 +56,7 @@ function syncCopy() {
   document.querySelector("#legend-jump")!.textContent = t.legendJump;
   document.querySelector("#legend-pause")!.textContent = t.legendPause;
   pauseBtn.textContent = t.pause;
-  jumpBtn.textContent = t.jumpBtn;
+  jumpBtn.querySelector(".jump-btn-label")!.textContent = t.jumpBtn;
   const rotateText = document.querySelector("#rotate-text");
   if (rotateText) rotateText.textContent = t.rotate;
 }
@@ -74,11 +71,10 @@ function syncHud() {
 
 function renderOverlay() {
   syncCopy();
-  const t = STR[lang];
+  const t = STR;
   const key = [
     state.phase,
     String(isGameOverVisible(state)),
-    lang,
     state.phase === "dead" ? String(state.score) : "",
     String(state.best),
   ].join("|");
@@ -88,16 +84,18 @@ function renderOverlay() {
   if (state.phase === "title") {
     overlay.hidden = false;
     overlay.innerHTML = `
-      <p class="eyebrow">${t.subtitle}</p>
-      <h1>${t.title}</h1>
-      <p class="how">${t.how}</p>
-      <button type="button" data-act="start">${t.start}</button>
-      <p class="hint">${t.hint}</p>
-      <dl class="help">
-        <dt>${isTouchDevice() ? t.joystick : "← →"}</dt><dd>${t.move}</dd>
-        <dt>${isTouchDevice() ? t.jumpBtn : "Space"}</dt><dd>${t.jump}</dd>
-        <dt>Esc</dt><dd>${t.pause}</dd>
-      </dl>
+      <div class="overlay-card">
+        <p class="eyebrow">${t.subtitle}</p>
+        <h1>${t.title}</h1>
+        <p class="how">${t.how}</p>
+        <button type="button" data-act="start">${t.start}</button>
+        <p class="hint">${t.hint}</p>
+        <dl class="help">
+          <dt>${isTouchDevice() ? t.joystick : "← →"}</dt><dd>${t.move}</dd>
+          <dt>${isTouchDevice() ? t.jumpBtn : "Space"}</dt><dd>${t.jump}</dd>
+          <dt>Esc</dt><dd>${t.pause}</dd>
+        </dl>
+      </div>
     `;
     return;
   }
@@ -105,9 +103,11 @@ function renderOverlay() {
   if (state.phase === "paused") {
     overlay.hidden = false;
     overlay.innerHTML = `
-      <h1>${t.paused}</h1>
-      <button type="button" data-act="resume">${t.resume}</button>
-      <button type="button" data-act="restart" class="ghost">${t.restart}</button>
+      <div class="overlay-card">
+        <h1>${t.paused}</h1>
+        <button type="button" data-act="resume">${t.resume}</button>
+        <button type="button" data-act="restart" class="ghost">${t.restart}</button>
+      </div>
     `;
     return;
   }
@@ -115,11 +115,13 @@ function renderOverlay() {
   if (isGameOverVisible(state)) {
     overlay.hidden = false;
     overlay.innerHTML = `
-      <p class="eyebrow">${t.gameOver}</p>
-      <h1>${state.score}</h1>
-      <p class="how">${t.crushed}</p>
-      <p class="hint">${t.best}: ${state.best}</p>
-      <button type="button" data-act="start">${t.playAgain}</button>
+      <div class="overlay-card">
+        <p class="eyebrow">${t.gameOver}</p>
+        <h1>${state.score}</h1>
+        <p class="how">${t.crushed}</p>
+        <p class="hint">${t.best}: ${state.best}</p>
+        <button type="button" data-act="start">${t.playAgain}</button>
+      </div>
     `;
     return;
   }
@@ -140,12 +142,6 @@ overlay.addEventListener("click", (event) => {
   const act = btn.dataset.act;
   if (act === "start" || act === "restart") beginRun();
   if (act === "resume") togglePause(state);
-  renderOverlay();
-});
-
-langBtn.addEventListener("click", () => {
-  lang = lang === "lv" ? "en" : "lv";
-  overlayKey = "";
   renderOverlay();
 });
 
@@ -194,11 +190,7 @@ function handleInput() {
   if (pendingJump !== null && now > pendingJumpUntil && pendingJump !== 0) pendingJump = null;
 
   if (pendingJump === -1 || pendingJump === 1) {
-    const busy =
-      state.player.moving ||
-      state.player.pose === "walk" ||
-      state.player.pose === "push";
-    if (!busy && tryJump(state, pendingJump)) {
+    if (tryJump(state, pendingJump)) {
       pendingJump = null;
       return;
     }

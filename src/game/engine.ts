@@ -42,6 +42,7 @@ export type Crate = {
 
 export type Crane = {
   x: number;
+  dir: Dir;
   carrying: boolean;
   dropCol: number;
   dropping: number;
@@ -133,12 +134,16 @@ function emptyPlayer(): Player {
   };
 }
 
-function craneEnterX(index = 0): number {
-  return (CANVAS_W + CELL * 0.85 - ORIGIN_X) / CELL + index * 1.85;
+function craneRightX(extra = 0): number {
+  return (CANVAS_W + CELL * 0.85 - ORIGIN_X) / CELL + extra;
 }
 
-function craneExitX(): number {
-  return (-CELL * 1.1 - ORIGIN_X) / CELL;
+function craneLeftX(extra = 0): number {
+  return (-CELL * 1.1 - ORIGIN_X) / CELL - extra;
+}
+
+function randomDir(): Dir {
+  return Math.random() < 0.5 ? -1 : 1;
 }
 
 function makeCrane(index: number, avoidCol?: number): Crane {
@@ -146,12 +151,24 @@ function makeCrane(index: number, avoidCol?: number): Crane {
   if (avoidCol !== undefined && dropCol === avoidCol) {
     dropCol = (dropCol + 4) % COLS;
   }
+  const dir: Dir = index === 0 ? -1 : randomDir();
+  const stagger = index * 1.85 + Math.random() * 0.6;
   return {
-    x: craneEnterX(index),
+    x: dir < 0 ? craneRightX(stagger) : craneLeftX(stagger),
+    dir,
     carrying: true,
     dropCol,
     dropping: 0,
   };
+}
+
+function recycleCrane(state: GameState, crane: Crane) {
+  crane.dir = randomDir();
+  const stagger = 0.4 + Math.random() * 1.6;
+  crane.x = crane.dir < 0 ? craneRightX(stagger) : craneLeftX(stagger);
+  crane.carrying = true;
+  crane.dropping = 0;
+  crane.dropCol = randomFreeCol(state) ?? Math.floor(Math.random() * COLS);
 }
 
 export function createGame(): GameState {
@@ -234,6 +251,26 @@ function beginMove(
   actor.moving = true;
 }
 
+function retargetMove(
+  actor: { col: number; row: number; fromCol: number; fromRow: number; animT: number; animDur: number; moving: boolean },
+  col: number,
+  row: number,
+  dur: number,
+) {
+  const vis = visualPos(actor);
+  actor.fromCol = vis.col;
+  actor.fromRow = vis.row;
+  actor.col = col;
+  actor.row = row;
+  actor.animT = 0;
+  actor.animDur = dur;
+  actor.moving = true;
+}
+
+function crateIsFalling(crate: Crate): boolean {
+  return crate.moving && crate.fromRow > crate.row;
+}
+
 function stepAnim(actor: { animT: number; animDur: number; moving: boolean }, dt: number): boolean {
   if (!actor.moving) return false;
   const dur = actor.animDur > 0 ? actor.animDur : 1;
@@ -303,7 +340,7 @@ function updateCranes(state: GameState, dt: number) {
   const speed = 1.28 + state.score * 0.008;
   for (const crane of state.cranes) {
     const slow = crane.dropping > 0 ? 0.55 : 1;
-    crane.x -= (speed * slow * dt) / 1000;
+    crane.x += (crane.dir * speed * slow * dt) / 1000;
 
     if (crane.dropping > 0) {
       crane.dropping -= dt;
@@ -313,23 +350,28 @@ function updateCranes(state: GameState, dt: number) {
         crane.carrying = false;
       }
     } else if (crane.carrying) {
-      if (crane.x <= crane.dropCol + 0.18 && crane.x >= crane.dropCol - 0.4 && !topBusy(state, crane.dropCol)) {
+      const atDrop =
+        crane.dir < 0
+          ? crane.x <= crane.dropCol + 0.18 && crane.x >= crane.dropCol - 0.4
+          : crane.x >= crane.dropCol - 0.18 && crane.x <= crane.dropCol + 0.4;
+      if (atDrop && !topBusy(state, crane.dropCol)) {
         crane.dropping = CRANE_DROP_MS;
-      } else if (crane.x < crane.dropCol - 0.45) {
-        const next = randomFreeCol(
-          state,
-          state.cranes.map((item) => item.dropCol),
-        );
-        if (next !== null && next < crane.x) crane.dropCol = next;
+      } else {
+        const passed = crane.dir < 0 ? crane.x < crane.dropCol - 0.45 : crane.x > crane.dropCol + 0.45;
+        if (passed) {
+          const next = randomFreeCol(
+            state,
+            state.cranes.map((item) => item.dropCol),
+          );
+          if (next !== null && (crane.dir < 0 ? next < crane.x : next > crane.x)) {
+            crane.dropCol = next;
+          }
+        }
       }
     }
 
-    if (crane.x < craneExitX()) {
-      crane.x = craneEnterX();
-      crane.carrying = true;
-      crane.dropping = 0;
-      crane.dropCol = randomFreeCol(state) ?? Math.floor(Math.random() * COLS);
-    }
+    const offscreen = crane.dir < 0 ? crane.x < craneLeftX() : crane.x > craneRightX();
+    if (offscreen) recycleCrane(state, crane);
   }
 }
 
@@ -527,11 +569,44 @@ function playerGravity(state: GameState) {
 }
 
 function crateCanPush(state: GameState, crate: Crate, dir: Dir): boolean {
-  if (crate.moving) return false;
-  if (crateAt(state, crate.col, crate.row + 1)) return false;
+  const falling = crateIsFalling(crate);
+  if (crate.moving && !falling) return false;
+  if (!falling && crateAt(state, crate.col, crate.row + 1)) return false;
   const dest = crate.col + dir;
   if (dest < 0 || dest >= COLS) return false;
   return !blocked(state, dest, crate.row, crate.id);
+}
+
+function fallingCrateBeside(state: GameState, dir: Dir): Crate | undefined {
+  const p = state.player;
+  const col = p.col + dir;
+  let best: Crate | undefined;
+  let bestDist = 99;
+  for (const crate of state.crates) {
+    if (!crateIsFalling(crate)) continue;
+    const vis = visualPos(crate);
+    const beside = crate.col === col || crate.fromCol === col || Math.abs(vis.col - col) <= 0.55;
+    if (!beside) continue;
+    if (vis.row < p.row - 0.2 || vis.row > p.row + 1.55) continue;
+    const dist = Math.abs(vis.row - (p.row + 0.45));
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = crate;
+    }
+  }
+  return best;
+}
+
+function shoveCrate(state: GameState, crate: Crate, dir: Dir): boolean {
+  if (!crateCanPush(state, crate, dir)) return false;
+  const dest = crate.col + dir;
+  if (crateIsFalling(crate)) {
+    const remain = Math.max(CRATE_FALL_MS, (1 - crate.animT) * crate.animDur);
+    retargetMove(crate, dest, crate.row, remain);
+  } else {
+    beginMove(crate, dest, crate.row, CRATE_SLIDE_MS);
+  }
+  return true;
 }
 
 function settleGroundedPose(player: Player) {
@@ -550,13 +625,14 @@ export function tryWalk(state: GameState, dir: Dir): boolean {
   if (nx < 0 || nx >= COLS) return false;
 
   const feet = standRow(p);
-  const target = crateAt(state, nx, feet) ?? crateAt(state, nx, p.row);
+  const target =
+    crateAt(state, nx, feet) ?? crateAt(state, nx, p.row) ?? fallingCrateBeside(state, dir);
   if (target) {
-    if (target.row !== feet || !crateCanPush(state, target, dir)) return false;
+    if (!crateIsFalling(target) && target.row !== feet) return false;
     interruptMove(state);
     p.jumpT = 0;
-    beginMove(target, target.col + dir, target.row, CRATE_SLIDE_MS);
-    beginMove(p, nx, target.row, PUSH_MS);
+    if (!shoveCrate(state, target, dir)) return false;
+    if (!blocked(state, nx, feet, target.id)) beginMove(p, nx, feet, PUSH_MS);
     p.pose = "push";
     p.pushHold = 640;
     sfx.push();
@@ -612,6 +688,59 @@ function startJumpPose(state: GameState) {
   sfx.jump();
 }
 
+function columnStandRow(state: GameState, col: number): number {
+  let top = -1;
+  for (const crate of state.crates) {
+    if (crate.col !== col) continue;
+    if (crate.row > top) top = crate.row;
+  }
+  const stand = top + 1;
+  if (!inBounds(col, stand)) return Math.max(0, top);
+  return Math.max(0, stand);
+}
+
+function canLand(state: GameState, col: number, row: number): boolean {
+  return inBounds(col, row) && !blocked(state, col, row);
+}
+
+function jumpTo(state: GameState, col: number, row: number) {
+  const span = Math.abs(col - state.player.col) + Math.abs(row - state.player.row);
+  beginMove(state.player, col, row, span > 1.5 ? JUMP_MS + 80 : JUMP_MS);
+  startJumpPose(state);
+}
+
+function tryLeap(state: GameState, dir: Dir): boolean {
+  const p = state.player;
+  const from = standRow(p);
+  const d1 = p.col + dir;
+  const d2 = p.col + 2 * dir;
+  const midStand = inBounds(d1, 0) ? columnStandRow(state, d1) : ROWS;
+  const land1 = columnStandRow(state, d1);
+  const land2 = columnStandRow(state, d2);
+
+  if (canLand(state, d1, land1) && land1 > 0 && land1 <= from) {
+    jumpTo(state, d1, land1);
+    return true;
+  }
+  if (canLand(state, d2, land2) && land2 > 0 && land2 <= from && midStand <= from) {
+    jumpTo(state, d2, land2);
+    return true;
+  }
+  if (from > 0 && canLand(state, d2, land2) && land2 < from && midStand <= from) {
+    jumpTo(state, d2, land2);
+    return true;
+  }
+  if (from > 0 && canLand(state, d1, land1) && land1 < from) {
+    jumpTo(state, d1, land1);
+    return true;
+  }
+  if (canLand(state, d1, land1) && land1 === from) {
+    jumpTo(state, d1, land1);
+    return true;
+  }
+  return false;
+}
+
 function climbOntoCrate(state: GameState, crate: Crate, nx: number) {
   const land = crate.row + 1;
   if (!inBounds(nx, land) || blocked(state, nx, land)) return false;
@@ -621,9 +750,8 @@ function climbOntoCrate(state: GameState, crate: Crate, nx: number) {
 }
 
 function jumpPushCrate(state: GameState, crate: Crate, dir: Dir, nx: number) {
-  if (!crateCanPush(state, crate, dir)) return false;
   interruptMove(state);
-  beginMove(crate, crate.col + dir, crate.row, CRATE_SLIDE_MS);
+  if (!shoveCrate(state, crate, dir)) return false;
   beginMove(state.player, nx, crate.row, JUMP_MS);
   startJumpPose(state);
   sfx.push();
@@ -640,7 +768,7 @@ function directedJump(state: GameState, dir: Dir): boolean {
   if (climbCrate && climbOntoCrate(state, climbCrate, nx)) return true;
   const stacked = climbCrate ? crateAt(state, nx, climbCrate.row + 1) : crateAt(state, nx, feet + 1);
   if (stacked && crateCanPush(state, stacked, dir)) return jumpPushCrate(state, stacked, dir, nx);
-  return false;
+  return tryLeap(state, dir);
 }
 
 export function tryJump(state: GameState, dir: Dir | 0): boolean {
@@ -648,15 +776,9 @@ export function tryJump(state: GameState, dir: Dir | 0): boolean {
   const p = state.player;
   if (p.pose === "dead") return false;
   settleGroundedPose(p);
+  if (p.pose === "jump" || p.pose === "fall" || p.jumpT > 0) return false;
 
-  if (dir !== 0) {
-    if (p.moving && p.pose !== "walk" && p.pose !== "push" && p.pose !== "jump" && p.pose !== "fall") {
-      return false;
-    }
-    return directedJump(state, dir);
-  }
-
-  if (p.jumpT > 0 || p.pose === "jump") return false;
+  if (dir !== 0) return directedJump(state, dir);
   if (p.moving && p.pose !== "walk" && p.pose !== "push") return false;
   hopInPlace(state);
   return true;
@@ -701,7 +823,8 @@ export function visualPos(
   let row = actor.fromRow + (actor.row - actor.fromRow) * t;
   if (hop) {
     const climb = actor.row - actor.fromRow;
-    const arc = climb > 0.1 ? 0.68 : 0.42;
+    const span = Math.abs(actor.col - actor.fromCol);
+    const arc = climb > 0.1 ? 0.68 : span > 1.1 ? 0.55 : span >= 1 ? 0.5 : 0.42;
     row += arc * 4 * t * (1 - t);
   }
   return { col, row };

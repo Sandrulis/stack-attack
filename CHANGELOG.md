@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.4
+
+- Lēciens uz priekšu tikai ar bultu vai džoistiku; no kastes var aizlekt uz nākamo, krītošu kasti var stumt arī gaisā
+- Vairāki telferi iet pilnu ekrānu abos virzienos; iOS stila zaļš džoistiks un Jump poga
+- Tikai angļu UI; datorā Score/Best galvenē, bez logotipa
+
 ## v0.1.3
 
 - Cilvēciņš ar navy hoodie, kantainu galvu un cepuri; lēciens uz kastes bez pauzes gaisā

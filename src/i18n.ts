@@ -1,34 +1,4 @@
-export type Lang = "lv" | "en";
-
-const lv = {
-  title: "Stack Attack",
-  subtitle: "Kluču noliktava",
-  start: "Sākt spēli",
-  how: "Par katru nomesto un iznīcināto kasti +1. Stum kastes un piepildi apakšējo rindu.",
-  score: "Punkti",
-  best: "Rekords",
-  cranes: "Telferi",
-  paused: "Pauze",
-  resume: "Turpināt",
-  restart: "Sākt no jauna",
-  gameOver: "Spēle beigusies",
-  crushed: "Tevi saspauda kaste!",
-  playAgain: "Vēlreiz",
-  controls: "Vadība",
-  move: "Iet un stumt",
-  jump: "Uzlēkt uz kastes; vienu kasti var arī pastumt palēcoties",
-  pause: "Pauze",
-  hint: "Nospied Enter vai Sākt",
-  legendMove: "← → iet un stumt",
-  legendJump: "←/→ + Space uzlēkt / pastumt",
-  legendPause: "Esc pauze",
-  joystick: "Džoistiks",
-  jumpBtn: "Lekt",
-  moveTouch: "Džoistiks",
-  rotate: "Pagriez tālruni horizontāli",
-};
-
-const en = {
+export const STR = {
   title: "Stack Attack",
   subtitle: "Block warehouse",
   start: "Start game",
@@ -44,16 +14,13 @@ const en = {
   playAgain: "Play again",
   controls: "Controls",
   move: "Walk and push",
-  jump: "Jump onto a crate; a single crate can also be pushed while jumping",
+  jump: "Jump onto a crate, hop off it, or leap over one crate",
   pause: "Pause",
   hint: "Press Enter or Start",
   legendMove: "← → walk and push",
-  legendJump: "←/→ + Space climb / push",
+  legendJump: "←/→ + Space jump / push",
   legendPause: "Esc pause",
   joystick: "Joystick",
   jumpBtn: "Jump",
-  moveTouch: "Joystick",
   rotate: "Turn your phone sideways",
 };
-
-export const STR: Record<Lang, typeof lv> = { lv, en };

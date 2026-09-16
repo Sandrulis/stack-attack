@@ -203,8 +203,14 @@ function drawGrassFloor(ctx: CanvasRenderingContext2D) {
 function drawCranes(ctx: CanvasRenderingContext2D, state: GameState) {
   for (const crane of state.cranes) {
     const x = ORIGIN_X + crane.x * CELL;
-    if (x < -CELL || x > CANVAS_W + CELL) continue;
+    if (x < -CELL * 1.4 || x > CANVAS_W + CELL * 1.4) continue;
     const railY = ORIGIN_Y - 40;
+    ctx.save();
+    if (crane.dir > 0) {
+      ctx.translate(x + CELL / 2, 0);
+      ctx.scale(-1, 1);
+      ctx.translate(-(x + CELL / 2), 0);
+    }
     box(ctx, x - 4, railY, CELL + 8, 22, PALETTE.iron, PALETTE.iron, PALETTE.ironDark);
     box(ctx, x + 10, railY - 10, CELL - 20, 14, PALETTE.gold, "#fff6a8", PALETTE.goldDark);
     const hookY = railY + (crane.dropping > 0 ? 52 : 30);
@@ -214,6 +220,7 @@ function drawCranes(ctx: CanvasRenderingContext2D, state: GameState) {
     if (crane.carrying) {
       drawCrateSprite(ctx, x, hookY + 8, CRATE_SCALE);
     }
+    ctx.restore();
   }
 }
 
@@ -468,22 +475,21 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number,
   }
 
   const stride = pos.col * Math.PI;
-  const sw = walking && !push ? Math.sin(stride) * 0.7 : 0;
-  const strain = Math.sin(time / 180);
+  const sw = walking || push ? Math.sin(stride) * 0.7 : 0;
+  const strain = Math.sin(time / 140);
 
   let leftLeg = 0;
   let rightLeg = 0;
   let leftArm = 0;
   let rightArm = 0;
 
-  if (push) {
-    leftLeg = 0.42 + strain * 0.1;
-    rightLeg = -0.34 - strain * 0.08;
-  } else if (walking) {
+  if (push || walking) {
     leftLeg = sw;
     rightLeg = -sw;
-    leftArm = -sw * 0.85;
-    rightArm = sw * 0.85;
+    if (!push) {
+      leftArm = -sw * 0.85;
+      rightArm = sw * 0.85;
+    }
   } else if (jump || fall) {
     leftLeg = 0.72;
     rightLeg = -0.62;
@@ -496,8 +502,8 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number,
   ctx.translate(cx, y + CELL + 2);
   ctx.scale(facing * 1.12, 1.12);
   if (push) {
-    ctx.translate(8, 4);
-    ctx.rotate(-0.22);
+    ctx.translate(9, 5);
+    ctx.rotate(-0.16);
   } else if (jump || fall) {
     ctx.rotate(-0.18);
   }
@@ -509,21 +515,7 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number,
   ctx.fill();
 
   if (push) {
-    voxelArm(
-      ctx,
-      -7,
-      22,
-      -0.95 - strain * 0.06,
-      -0.72,
-      10,
-      16,
-      22,
-      PALETTE.shirt,
-      PALETTE.shirtLight,
-      PALETTE.shirtDark,
-      PALETTE.skin,
-      PALETTE.skinDark,
-    );
+    voxelLimb(ctx, -6, 26, -0.62, 9, 26, PALETTE.shirt, PALETTE.shirtLight, PALETTE.shirtDark, PALETTE.skin);
   } else {
     voxelLimb(ctx, -6, 22, leftArm, 10, 28, PALETTE.shirt, PALETTE.shirtLight, PALETTE.shirtDark, PALETTE.skin);
   }
@@ -541,12 +533,12 @@ function drawPlayer(ctx: CanvasRenderingContext2D, player: Player, time: number,
     voxelArm(
       ctx,
       7,
-      21,
-      -1.12 - strain * 0.08,
-      -0.62,
+      24,
+      -0.82 - strain * 0.05,
+      -0.36,
       10,
       15,
-      24,
+      25,
       PALETTE.shirt,
       PALETTE.shirtLight,
       PALETTE.shirtDark,

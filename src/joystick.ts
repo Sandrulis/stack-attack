@@ -13,10 +13,11 @@ export function bindJoystick(
   let originX = 0;
   let active = false;
 
-  const radius = () => Math.max(40, root.clientWidth * 0.42);
+  const radius = () => Math.max(8, (root.clientWidth - knob.offsetWidth) / 2 - 3);
 
   const setKnob = (x: number) => {
     knob.style.transform = `translate(${x * radius()}px, 0px)`;
+    root.classList.toggle("is-active", Math.abs(x) > 0.08);
   };
 
   const apply = (clientX: number) => {
