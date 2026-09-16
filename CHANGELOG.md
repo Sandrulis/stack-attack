@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.5
+
+- Mobilais džoistiks par 15% šaurāks, lai mazāk aizsedz laukumu
+
 ## v0.1.4
 
 - Lēciens uz priekšu tikai ar bultu vai džoistiku; no kastes var aizlekt uz nākamo, krītošu kasti var stumt arī gaisā

@@ -240,13 +240,13 @@ button:disabled {
 }
 
 .joystick {
-  width: 152px;
+  width: 129px;
   height: 44px;
 }
 
 .joystick-base {
   position: relative;
-  width: 152px;
+  width: 129px;
   height: 44px;
   border-radius: 22px;
   overflow: hidden;
@@ -501,7 +501,7 @@ button:disabled {
 
   .joystick,
   .joystick-base {
-    width: 158px;
+    width: 134px;
     height: 42px;
   }
 
