@@ -112,7 +112,7 @@ function drawWorld(ctx: CanvasRenderingContext2D, state: GameState) {
   drawCloud(ctx, 510, 28, 3);
 
   drawStoneWall(ctx);
-  drawWindows(ctx, state.sunset);
+  drawWindows(ctx, state);
   drawRails(ctx);
   drawGrassFloor(ctx);
 
@@ -147,7 +147,7 @@ function drawStoneWall(ctx: CanvasRenderingContext2D) {
   }
 }
 
-function drawWindows(ctx: CanvasRenderingContext2D, sunset: number) {
+function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
   const pad = 10;
   const gaps = 8;
   const count = 3;
@@ -155,7 +155,7 @@ function drawWindows(ctx: CanvasRenderingContext2D, sunset: number) {
   const winW = (totalW - gaps * (count - 1)) / count;
   const winH = ROWS * CELL * 0.52;
   const winY = ORIGIN_Y + 10;
-  const t = Math.max(0, Math.min(1, sunset));
+  const t = Math.max(0, Math.min(1, state.sunset));
   for (let i = 0; i < count; i += 1) {
     const x = pad + i * (winW + gaps);
     box(ctx, x - 6, winY - 6, winW + 12, winH + 12, PALETTE.windowFrame, PALETTE.iron, PALETTE.grout);
@@ -180,6 +180,7 @@ function drawWindows(ctx: CanvasRenderingContext2D, sunset: number) {
       drawSunsetSun(ctx, winY, winH);
       ctx.globalAlpha = 1;
     }
+    drawWindowClouds(ctx, state, winY);
     ctx.restore();
     ctx.fillStyle = t > 0 ? `rgba(255, 140, 80, ${0.12 * t})` : PALETTE.glass;
     ctx.fillRect(x, winY, winW, winH);
@@ -188,6 +189,32 @@ function drawWindows(ctx: CanvasRenderingContext2D, sunset: number) {
     ctx.fillStyle = PALETTE.windowFrame;
     ctx.fillRect(x + winW / 2 - 2, winY, 4, winH);
     ctx.fillRect(x, winY + winH / 2 - 2, winW, 4);
+  }
+}
+
+function drawWindowClouds(ctx: CanvasRenderingContext2D, state: GameState, winY: number) {
+  for (const cloud of state.skyClouds) {
+    const s = cloud.scale;
+    const gap = 16 * s;
+    const puffW = 26 * s;
+    const puffH = 18 * s;
+    for (let i = 0; i < cloud.puffs; i += 1) {
+      const px = cloud.x + i * gap;
+      const py = winY + cloud.y + (i % 2) * (7 * s);
+      box(ctx, px, py, puffW, puffH, "#ffffff", "#ffffff", PALETTE.cloudDark);
+    }
+    for (let i = 1; i < cloud.puffs - 1; i += 1) {
+      box(
+        ctx,
+        cloud.x + i * gap + 2 * s,
+        winY + cloud.y - 10 * s,
+        puffW * 0.82,
+        puffH * 0.85,
+        "#ffffff",
+        "#ffffff",
+        PALETTE.cloudDark,
+      );
+    }
   }
 }
 

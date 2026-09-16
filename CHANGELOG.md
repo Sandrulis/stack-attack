@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.7
+
+- Aiz noliktavas logiem ik pa laikam peld balti, gubaini mākoņi dažādos izmēros
+
 ## v0.1.6
 
 - Pilna rinda pazūd plūdeni, neapstādinot telferus un pārējo spēli

@@ -79,6 +79,14 @@ export type Player = {
   jumpT: number;
 };
 
+export type SkyCloud = {
+  x: number;
+  y: number;
+  vx: number;
+  scale: number;
+  puffs: number;
+};
+
 export type GameState = {
   phase: Phase;
   player: Player;
@@ -86,6 +94,8 @@ export type GameState = {
   cranes: Crane[];
   particles: Particle[];
   popups: Popup[];
+  skyClouds: SkyCloud[];
+  cloudWait: number;
   score: number;
   best: number;
   recordAtStart: number;
@@ -172,6 +182,30 @@ function recycleCrane(state: GameState, crane: Crane) {
   crane.dropCol = randomFreeCol(state) ?? Math.floor(Math.random() * COLS);
 }
 
+function spawnSkyCloud(onScreen = false): SkyCloud {
+  const scale = 0.55 + Math.random() * 1.55;
+  const dir: Dir = Math.random() < 0.78 ? -1 : 1;
+  const puffs = 3 + Math.floor(Math.random() * 4);
+  const width = 22 * puffs * scale;
+  return {
+    x: onScreen ? -20 + Math.random() * (CANVAS_W - width + 40) : dir < 0 ? CANVAS_W + 40 : -width - 40,
+    y: 22 + Math.random() * 168,
+    vx: dir * (0.012 + Math.random() * 0.028),
+    scale,
+    puffs,
+  };
+}
+
+function updateSkyClouds(state: GameState, dt: number) {
+  state.cloudWait -= dt;
+  if (state.cloudWait <= 0 && state.skyClouds.length < 4) {
+    state.skyClouds.push(spawnSkyCloud());
+    state.cloudWait = 2200 + Math.random() * 6200;
+  }
+  for (const cloud of state.skyClouds) cloud.x += cloud.vx * dt;
+  state.skyClouds = state.skyClouds.filter((cloud) => cloud.x > -320 && cloud.x < CANVAS_W + 320);
+}
+
 export function createGame(): GameState {
   return {
     phase: "title",
@@ -180,6 +214,8 @@ export function createGame(): GameState {
     cranes: [makeCrane(0, COLS - 2)],
     particles: [],
     popups: [],
+    skyClouds: [spawnSkyCloud(true), spawnSkyCloud(true)],
+    cloudWait: 1800 + Math.random() * 2400,
     score: 0,
     best: loadBest(),
     recordAtStart: loadBest(),
@@ -839,6 +875,7 @@ export function updateGame(state: GameState, dt: number) {
     state.sunset = Math.min(1, state.sunset + dt / 1100);
   }
   updateParticles(state, dt);
+  if (state.phase !== "paused") updateSkyClouds(state, dt);
 
   if (state.phase === "title" || state.phase === "paused") return;
 
