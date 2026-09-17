@@ -23,7 +23,11 @@ export const CRANE_DROP_MS = 420;
 export const CRATE_SCALE = 1;
 
 export const MAX_CRANES = 4;
+export const MAX_LIVES = 5;
+export const START_LIVES = 1;
+export const HEART_REGEN_MS = 24 * 60 * 60 * 1000;
 export const HIGH_SCORE_KEY = "stack-attack-highscore";
+export const LIVES_KEY = "boxdrop-lives-v2";
 
 export const PALETTE = {
   skyTop: "#78a7ff",

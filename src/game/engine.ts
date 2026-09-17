@@ -3,17 +3,20 @@ import {
   CANVAS_W,
   CELL,
   COLS,
+  CRANE_DROP_MS,
   CRATE_FALL_MS,
   CRATE_SLIDE_MS,
-  DEATH_MS,
-  FALL_MS,
-  HIGH_SCORE_KEY,
-  CRANE_DROP_MS,
   CRUSH_HIT_ROW,
   CRUSH_REST_ROW,
   CRUSH_SETTLE_MS,
+  DEATH_MS,
+  FALL_MS,
+  HEART_REGEN_MS,
+  HIGH_SCORE_KEY,
   JUMP_MS,
+  LIVES_KEY,
   MAX_CRANES,
+  MAX_LIVES,
   ORIGIN_X,
   ORIGIN_Y,
   PUSH_MS,
@@ -140,6 +143,9 @@ export type GameState = {
   fireworkWait: number;
   celebration: number;
   score: number;
+  livesReady: boolean;
+  lives: number;
+  nextLifeAt: number;
   best: number;
   recordAtStart: number;
   globalBestAtStart: number;
@@ -168,6 +174,56 @@ function saveBest(score: number) {
   } catch {
     /* ignore quota / private mode */
   }
+}
+
+function saveLives(state: GameState) {
+  if (!state.livesReady) return;
+  try {
+    localStorage.setItem(LIVES_KEY, JSON.stringify({ lives: state.lives, nextLifeAt: state.nextLifeAt }));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+export function applyLifeRegen(state: GameState, now = Date.now()) {
+  if (!state.livesReady) return;
+  const beforeLives = state.lives;
+  const beforeAt = state.nextLifeAt;
+  if (state.lives >= MAX_LIVES) {
+    state.lives = MAX_LIVES;
+    state.nextLifeAt = 0;
+  } else {
+    if (!state.nextLifeAt) state.nextLifeAt = now + HEART_REGEN_MS;
+    while (state.lives < MAX_LIVES && state.nextLifeAt > 0 && now >= state.nextLifeAt) {
+      state.lives += 1;
+      if (state.lives >= MAX_LIVES) state.nextLifeAt = 0;
+      else state.nextLifeAt += HEART_REGEN_MS;
+    }
+  }
+  if (state.lives !== beforeLives || state.nextLifeAt !== beforeAt) saveLives(state);
+}
+
+export function hydrateLives(state: GameState, lives: number, nextLifeAt: number) {
+  state.livesReady = true;
+  state.lives = Math.max(0, Math.min(MAX_LIVES, lives));
+  state.nextLifeAt = state.lives >= MAX_LIVES ? 0 : Math.max(0, nextLifeAt);
+  applyLifeRegen(state);
+  saveLives(state);
+}
+
+export function clearLives(state: GameState) {
+  state.livesReady = false;
+  state.lives = 0;
+  state.nextLifeAt = 0;
+}
+
+export function spendLocalLife(state: GameState): boolean {
+  applyLifeRegen(state);
+  if (state.lives < 1) return false;
+  state.lives -= 1;
+  if (!state.nextLifeAt) state.nextLifeAt = Date.now() + HEART_REGEN_MS;
+  saveLives(state);
+  return true;
 }
 
 function emptyPlayer(): Player {
@@ -348,7 +404,7 @@ function updateRain(state: GameState, dt: number) {
 }
 
 export function createGame(): GameState {
-  return {
+  const state: GameState = {
     phase: "title",
     player: emptyPlayer(),
     crates: [],
@@ -370,6 +426,9 @@ export function createGame(): GameState {
     fireworkWait: 120,
     celebration: 0,
     score: 0,
+    livesReady: false,
+    lives: 0,
+    nextLifeAt: 0,
     best: loadBest(),
     recordAtStart: loadBest(),
     globalBestAtStart: Number.POSITIVE_INFINITY,
@@ -381,6 +440,7 @@ export function createGame(): GameState {
     nextId: 1,
     time: 0,
   };
+  return state;
 }
 
 export function hydrateBest(state: GameState, best: number) {
@@ -779,6 +839,35 @@ function killPlayer(state: GameState, crate?: Crate) {
   syncLocalBest(state);
 }
 
+export function revivePlayer(state: GameState): boolean {
+  if (state.phase !== "dead") return false;
+  const crushed = state.crates.find((crate) => crate.crushTo != null);
+  if (crushed) {
+    state.crates = state.crates.filter((item) => item.id !== crushed.id);
+    for (let i = 0; i < 10; i += 1) {
+      state.particles.push({
+        x: crushed.col + 0.5,
+        y: crushed.row + 0.5,
+        vx: (Math.random() - 0.5) * 0.014,
+        vy: 0.003 + Math.random() * 0.012,
+        life: 320 + Math.random() * 180,
+        max: 560,
+      });
+    }
+  }
+  const p = state.player;
+  p.pose = "idle";
+  p.moving = false;
+  p.animT = 1;
+  p.jumpT = 0;
+  p.pushHold = 0;
+  state.phase = "playing";
+  state.deathT = 0;
+  state.flash = 0.2;
+  state.shake = 4;
+  return true;
+}
+
 function bottomRowFull(state: GameState): boolean {
   for (let col = 0; col < COLS; col += 1) {
     const crate = crateAt(state, col, 0);
@@ -1150,6 +1239,7 @@ function stepCrushSettle(crate: Crate, dt: number) {
 
 export function updateGame(state: GameState, dt: number) {
   state.time += dt;
+  applyLifeRegen(state);
   state.shake = Math.max(0, state.shake - dt * 0.028);
   state.flash = Math.max(0, state.flash - dt * 0.004);
   if (state.phase !== "title" && state.phase !== "paused") {

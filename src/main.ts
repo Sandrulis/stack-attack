@@ -10,19 +10,23 @@ import {
 } from "./input";
 import { bindJoystick, isTouchDevice } from "./joystick";
 import { STR } from "./i18n";
-import { CANVAS_H, CANVAS_W, MAX_CRANES } from "./game/constants";
+import { CANVAS_H, CANVAS_W, MAX_CRANES, MAX_LIVES } from "./game/constants";
 import {
+  clearLives,
   createGame,
   hydrateBest,
   hydrateLeader,
+  hydrateLives,
   isGameOverVisible,
+  revivePlayer,
+  runBeatRecord,
+  spendLocalLife,
   startRun,
+  syncLocalBest,
   togglePause,
   tryJump,
   tryWalk,
   updateGame,
-  runBeatRecord,
-  syncLocalBest,
 } from "./game/engine";
 import { drawGame } from "./game/render";
 import type { User } from "@supabase/supabase-js";
@@ -41,6 +45,7 @@ import {
   setPlayerName,
   signInWithGoogle,
   signOut,
+  spendPlayerLife,
   startPlayerRun,
   suggestedNameFromUser,
   type BoardRow,
@@ -55,7 +60,11 @@ const muteBtn = document.querySelector<HTMLButtonElement>("#mute-btn")!;
 const settingsBtn = document.querySelector<HTMLButtonElement>("#settings-btn")!;
 const scoreEl = document.querySelector("#score")!;
 const bestEl = document.querySelector("#best")!;
-const cranesEl = document.querySelector("#cranes")!;
+const hudLeftEl = document.querySelector<HTMLElement>("#hud-left")!;
+const cranesEl = document.querySelector<HTMLElement>("#cranes")!;
+const livesWrapEl = document.querySelector<HTMLElement>("#hud-lives-wrap")!;
+const livesEl = document.querySelector("#lives")!;
+const lifeTimerEl = document.querySelector<HTMLElement>("#life-timer")!;
 const ctx = canvas.getContext("2d")!;
 
 canvas.width = CANVAS_W;
@@ -80,6 +89,7 @@ let board: BoardRow[] = [];
 let authError = "";
 let authBusy = false;
 let beginBusy = false;
+let heartBusy = false;
 let nameBusy = false;
 let runSaved = false;
 let nameDraft = "";
@@ -304,6 +314,7 @@ async function refreshAccount(user: User | null) {
     nameDraft = "";
     didForceSettings = false;
     settingsOpen = false;
+    clearLives(state);
     bumpOverlay();
     void refreshBoardList();
     return;
@@ -312,6 +323,7 @@ async function refreshAccount(user: User | null) {
     stats = await loadPlayerStats(user);
     if (stats) {
       hydrateBest(state, stats.bestScore);
+      applyAccountLives(stats);
       nameDraft = stats.displayName || suggestedNameFromUser(user);
       if (!stats.nameSet && !didForceSettings) {
         didForceSettings = true;
@@ -374,6 +386,7 @@ function syncCopy() {
   pauseBtn.textContent = t.pause;
   boardBtn.textContent = t.boardOpen;
   settingsBtn.setAttribute("aria-label", t.settings);
+  livesEl.setAttribute("aria-label", t.lives);
   syncMuteButton();
   jumpBtn.querySelector(".jump-btn-label")!.textContent = t.jumpBtn;
   const rotateText = document.querySelector("#rotate-text");
@@ -387,12 +400,49 @@ function syncMuteButton() {
   muteBtn.setAttribute("aria-label", muted ? STR.unmute : STR.mute);
 }
 
+function formatLifeWait(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function applyAccountLives(next: PlayerStats | null | undefined) {
+  if (!next) return;
+  hydrateLives(state, next.lives, next.nextLifeAt);
+}
+
 function syncHud() {
+  const signedIn = Boolean(authUser);
+  hudLeftEl.hidden = !signedIn;
+  cranesEl.hidden = !signedIn;
+  livesWrapEl.hidden = !signedIn;
+  if (!signedIn) {
+    livesEl.innerHTML = "";
+    cranesEl.innerHTML = "";
+    lifeTimerEl.hidden = true;
+    lifeTimerEl.textContent = "";
+    return;
+  }
   scoreEl.textContent = String(state.score);
   bestEl.textContent = String(state.best);
   cranesEl.innerHTML = Array.from({ length: MAX_CRANES }, (_, index) =>
     `<span class="crane-dot${index < state.cranes.length ? " on" : ""}"></span>`,
   ).join("");
+  livesEl.innerHTML = Array.from({ length: MAX_LIVES }, (_, index) =>
+    `<span class="life-heart${index < state.lives ? " on" : ""}" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M8 14.2 2.2 8.6C1.1 7.5 1.1 5.6 2.3 4.5 3.4 3.4 5.2 3.4 6.3 4.5L8 6.2l1.7-1.7c1.1-1.1 2.9-1.1 4 0 1.2 1.1 1.2 3 0 4.1L8 14.2z"/></svg></span>`,
+  ).join("");
+  const waiting = state.livesReady && state.lives < MAX_LIVES && state.nextLifeAt > 0;
+  lifeTimerEl.hidden = !waiting;
+  if (waiting) {
+    const wait = formatLifeWait(state.nextLifeAt - Date.now());
+    lifeTimerEl.textContent = wait;
+    lifeTimerEl.setAttribute("aria-label", `${STR.nextHeart} ${wait}`);
+  } else {
+    lifeTimerEl.textContent = "";
+    lifeTimerEl.setAttribute("aria-label", STR.nextHeart);
+  }
 }
 
 function renderOverlay() {
@@ -407,6 +457,8 @@ function renderOverlay() {
     String(authReady),
     String(authBusy),
     String(beginBusy),
+    String(heartBusy),
+    String(state.lives),
     String(nameBusy),
     authError,
     String(stats?.todayPlays ?? ""),
@@ -556,8 +608,10 @@ function renderOverlay() {
         <p class="eyebrow">${escapeHtml(t.gameOver)}</p>
         <h1>${state.score}</h1>
         <p class="how">${escapeHtml(t.crushed)}</p>
+        ${authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : ""}
         ${statsMarkup()}
-        <button type="button" data-act="start"${beginBusy || !authUser ? " disabled" : ""}>${escapeHtml(t.playAgain)}</button>
+        <button type="button" data-act="use-heart"${heartBusy || beginBusy || state.lives < 1 ? " disabled" : ""}>${escapeHtml(t.useHeart)}</button>
+        <button type="button" data-act="start"${beginBusy || heartBusy || !authUser ? " disabled" : ""}>${escapeHtml(t.playAgain)}</button>
         <button type="button" data-act="board" class="ghost">${escapeHtml(t.board)}</button>
       </div>
     `;
@@ -603,13 +657,13 @@ async function beginRun() {
     openSettings();
     return;
   }
-  if (!canPlay() || beginBusy) return;
+  if (!canPlay() || beginBusy || heartBusy) return;
   beginBusy = true;
   authError = "";
   bumpOverlay();
   renderOverlay();
   try {
-    if (runBeatRecord(state)) {
+    if (state.phase === "dead" || runBeatRecord(state)) {
       syncLocalBest(state);
       await saveFinishedRun();
     }
@@ -617,6 +671,7 @@ async function beginRun() {
     if (next) {
       stats = next;
       hydrateBest(state, next.bestScore);
+      applyAccountLives(next);
     }
     unlockAudio();
     runSaved = false;
@@ -639,12 +694,37 @@ async function saveFinishedRun() {
     if (next) {
       stats = next;
       hydrateBest(state, next.bestScore);
+      applyAccountLives(next);
     }
     await fetchDisplayedBoard();
   } catch (error) {
     authError = errorMessage(error, STR.saveError);
   }
   bumpOverlay();
+}
+
+async function useHeart() {
+  if (heartBusy || beginBusy || !isGameOverVisible(state)) return;
+  if (state.lives < 1) return;
+  heartBusy = true;
+  authError = "";
+  bumpOverlay();
+  renderOverlay();
+  try {
+    const next = await spendPlayerLife();
+    if (next) {
+      stats = next;
+      applyAccountLives(next);
+    } else if (!spendLocalLife(state)) {
+      return;
+    }
+    revivePlayer(state);
+  } catch (error) {
+    authError = errorMessage(error, STR.heartError);
+  } finally {
+    heartBusy = false;
+    bumpOverlay();
+  }
 }
 
 overlay.addEventListener("input", (event) => {
@@ -711,6 +791,7 @@ overlay.addEventListener("click", (event) => {
     return;
   }
   if (act === "start" || act === "restart") void beginRun();
+  if (act === "use-heart") void useHeart();
   if (act === "resume") togglePause(state);
   if (act === "google") {
     authBusy = true;
@@ -835,7 +916,6 @@ function frame(now: number) {
   handleInput();
   updateGame(state, dt);
   handleInput();
-  if (state.phase === "dead") void saveFinishedRun();
   drawGame(ctx, state);
   syncHud();
   renderOverlay();

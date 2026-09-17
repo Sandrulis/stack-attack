@@ -16,7 +16,7 @@
           <p id="brand-title">BoxDrop</p>
           <small id="subtitle">Push. Stack. Survive.</small>
         </div>
-        <div class="hud-left">
+        <div class="hud-left" id="hud-left" hidden>
           <div class="stat">
             <span id="score-label">Score</span>
             <strong id="score">0</strong>
@@ -28,7 +28,7 @@
         </div>
         <div class="hud-right">
           <div class="hud-cranes">
-            <div class="stat cranes" id="cranes" aria-label="Cranes"></div>
+            <div class="stat cranes" id="cranes" aria-label="Cranes" hidden></div>
             <button type="button" id="mute-btn" class="ghost mute-btn" aria-pressed="false" aria-label="Mute sound">
               <svg class="mute-icon mute-icon-on" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="currentColor" d="M2 9h4l5-4v14l-5-4H2V9z" />
@@ -51,8 +51,14 @@
             </button>
           </div>
           <div class="top-actions">
-            <button type="button" id="board-btn" class="ghost">Scores</button>
-            <button type="button" id="pause-btn" class="ghost">Pause</button>
+            <div class="hud-action-btns">
+              <button type="button" id="board-btn" class="ghost">Scores</button>
+              <button type="button" id="pause-btn" class="ghost">Pause</button>
+            </div>
+            <div class="hud-lives-wrap" id="hud-lives-wrap" hidden>
+              <span class="life-timer" id="life-timer" hidden></span>
+              <div class="hud-lives" id="lives" aria-label="Lives"></div>
+            </div>
           </div>
         </div>
       </header>

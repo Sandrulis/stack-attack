@@ -1,6 +1,6 @@
 # BoxDrop
 
-**Current version:** `0.1.21`
+**Current version:** `0.1.22`
 
 **BoxDrop** is a 2D warehouse game in the browser. Slogan: *Push. Stack. Survive.* Push crates, dodge drops from overhead cranes, and clear a full bottom row for +1.
 
@@ -14,7 +14,7 @@ npm run dev
 
 Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env.local` (same names on Vercel Environment Variables). Open [http://localhost:3177](http://localhost:3177).
 
-Sign in with Google before you play. After login, username and play counts are in **Settings**. On phones, cranes and Settings sit under Score and Best; **Scores** opens the top 20 (All or your country): 1st gold, 2nd silver, 3rd bronze.
+Sign in with Google before you play. After login, username and play counts are in **Settings**. On phones, cranes and Settings sit under Score and Best; **Scores** lists every player (All or your country), including 0: 1st gold, 2nd silver, 3rd bronze. Equal scores put the newest account first, then A-Z.
 
 ## Controls
 
@@ -36,10 +36,11 @@ Sign in with Google before you play. After login, username and play counts are i
 - A falling crate can crush you - then the game is over.
 - When the bottom row is full it clears at once, play continues, crates above fall one at a time per column, and you score **+1**.
 - Score brings up to **4 cranes**, and drops get faster.
+- After sign-in, Score, Best, cranes, and five hearts appear (1 filled at the start). After a crush you can spend that heart once to continue; then you wait. The 24h countdown starts on sign-in, left of the hearts on desktop and under them on phones. **Use heart** stays off when none are left.
 - White puffy clouds sometimes drift behind the windows. After long gaps a storm can bring darkness and rain.
 - Beat your own record and the windows stay on a red sunset (sun half below the sill) until the run ends. Restart keeps a beaten personal or global record before the new run.
 - Beat the global high score and the windows stay night with fireworks.
-- Scores list a country under each name (from IP). A banner plane sometimes flies past with the leader name and score.
+- Scores list every player, including 0. Equal scores put the newest account first, then A-Z. A country sits under each name (from IP). A banner plane sometimes flies past with the leader name and score.
 
 ## Commands
 

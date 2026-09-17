@@ -58,7 +58,8 @@ button:disabled {
 .hud-left,
 .hud-right,
 .hud-cranes,
-.top-actions {
+.top-actions,
+.hud-action-btns {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -152,8 +153,13 @@ button:disabled {
 
 .hud-right,
 .hud-cranes,
-.top-actions {
+.top-actions,
+.hud-action-btns {
   align-items: stretch;
+}
+
+.hud-right {
+  margin-left: auto;
 }
 
 .hud-right .cranes,
@@ -168,6 +174,12 @@ button:disabled {
 
 .hud-left {
   align-items: stretch;
+}
+
+.hud-left[hidden],
+.cranes[hidden],
+.hud-lives-wrap[hidden] {
+  display: none !important;
 }
 
 .hud-left .stat {
@@ -186,6 +198,78 @@ button:disabled {
 .hud-left .stat strong {
   font-size: 20px;
   line-height: 1.1;
+}
+
+.top-actions {
+  display: grid;
+  grid-template-columns: auto auto;
+  grid-template-areas:
+    "scores pause"
+    "lives lives";
+  column-gap: 10px;
+  row-gap: 6px;
+  align-items: stretch;
+}
+
+.hud-action-btns {
+  display: contents;
+}
+
+#board-btn {
+  grid-area: scores;
+}
+
+#pause-btn {
+  grid-area: pause;
+}
+
+.hud-lives-wrap {
+  grid-area: lives;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 16px;
+  pointer-events: none;
+}
+
+.hud-lives {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3px;
+  min-width: 77px;
+}
+
+.life-timer {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.life-heart {
+  display: grid;
+  width: 13px;
+  height: 13px;
+  color: #3b3b3b;
+}
+
+.life-heart svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  stroke: #1a1a1a;
+  stroke-width: 1.1;
+  overflow: visible;
+}
+
+.life-heart.on {
+  color: #e23b4d;
 }
 
 .stage {
@@ -453,12 +537,21 @@ button:disabled {
 .overlay button[data-act="start"],
 .overlay button[data-act="resume"],
 .overlay button[data-act="google"],
+.overlay button[data-act="use-heart"],
 .overlay button[data-act="save-name"]:not(.ghost) {
   background: #3c8527;
   border-color: #1a1a1a;
   color: #f4f4f4;
   font-weight: 700;
   padding: 12px 22px;
+}
+
+.overlay button:disabled {
+  opacity: 0.42;
+}
+
+.overlay button:disabled:hover {
+  border-color: #1a1a1a;
 }
 
 .overlay button.ghost {
@@ -666,7 +759,8 @@ button:disabled {
     grid-template-areas:
       "scores . actions"
       "cranes . actions"
-      "gear . mute";
+      "gear . mute"
+      "lives . .";
     justify-content: space-between;
     align-items: start;
     column-gap: 12px;
@@ -710,10 +804,39 @@ button:disabled {
   }
 
   .top-actions {
+    display: contents;
+  }
+
+  .hud-action-btns {
     grid-area: actions;
+    display: flex;
     flex-direction: column-reverse;
     align-items: stretch;
     gap: 8px;
+  }
+
+  .hud-lives-wrap {
+    grid-area: lives;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 4px;
+    justify-self: stretch;
+    padding: 0 2px;
+  }
+
+  .hud-lives {
+    min-width: 0;
+  }
+
+  .life-timer {
+    text-align: center;
+    font-size: 12px;
+  }
+
+  .life-heart {
+    width: 15px;
+    height: 15px;
   }
 
   #mute-btn {

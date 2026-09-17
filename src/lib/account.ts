@@ -9,6 +9,8 @@ export type PlayerStats = {
   displayName: string;
   nameSet: boolean;
   country: string;
+  lives: number;
+  nextLifeAt: number;
 };
 
 export type BoardRow = {
@@ -30,6 +32,8 @@ type RpcStats = {
   display_name?: string;
   name_set?: boolean;
   country?: string;
+  lives?: number;
+  next_life_at?: string | null;
 };
 
 type RpcBoardRow = {
@@ -45,6 +49,16 @@ function asInt(value: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function asTime(value: unknown): number {
+  if (!value) return 0;
+  if (value instanceof Date) {
+    const n = value.getTime();
+    return Number.isFinite(n) ? n : 0;
+  }
+  const n = Date.parse(String(value));
+  return Number.isFinite(n) ? n : 0;
+}
+
 function readStats(raw: unknown): PlayerStats {
   const data = (raw ?? {}) as RpcStats;
   return {
@@ -55,6 +69,8 @@ function readStats(raw: unknown): PlayerStats {
     displayName: String(data.display_name || "Player"),
     nameSet: Boolean(data.name_set),
     country: String(data.country || "").trim(),
+    lives: asInt(data.lives, 1),
+    nextLifeAt: asTime(data.next_life_at),
   };
 }
 
@@ -164,6 +180,14 @@ export async function finishPlayerRun(score: number): Promise<PlayerStats | null
     p_score: score,
     p_day: todayLocalIso(),
   });
+  if (error) throw error;
+  return readStats(data);
+}
+
+export async function spendPlayerLife(): Promise<PlayerStats | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("spend_player_life");
   if (error) throw error;
   return readStats(data);
 }

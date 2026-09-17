@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.22
+
+- After sign-in, one heart lets you continue once after a crush; the next heart takes 24 hours
+- Score, Best, cranes, and hearts stay hidden until login; mute, Settings, Scores, and Pause stay on the right
+- Scores lists every player, including 0; equal scores put the newest account first, then A-Z
+
 ## v0.1.21
 
 - Cranes can drop into a column while a crate falls lower down, if at least one cell sits between them
