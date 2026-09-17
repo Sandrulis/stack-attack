@@ -1,6 +1,6 @@
 # Stack Attack
 
-**Current version:** `0.1.10`
+**Current version:** `0.1.11`
 
 **Stack Attack** stila 2D spēle pārlūkā. Cilvēciņš stumj kastes, telferis tās met no augšas visā laukuma platumā, un pilna apakšējā rinda pazūd ar +1 punktu.
 
@@ -46,4 +46,5 @@ Pirms spēles jābūt Google kontam. Pēc ielogošanās jāapstiprina lietotājv
 npm run typecheck
 npm run build
 npm run db:migrate
+npm run audit:check
 ```

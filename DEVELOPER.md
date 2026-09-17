@@ -28,3 +28,7 @@ Shippable izmaiņām vispirms bump `package.json`, `README.md` un `CHANGELOG.md`
 ```
 
 Pirms commit: `npm run typecheck` un `npm run build`.
+
+## GitHub drošības pārbaudes
+
+Katram push: **Secret scan** (Gitleaks), **Security audit** (`npm run audit:check`), **Security smoke** (typecheck, build, RLS, nav service role klientā, `vercel.json` galvenes).

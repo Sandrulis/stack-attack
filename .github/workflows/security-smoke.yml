@@ -1,0 +1,101 @@
+name: Security smoke
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  smoke:
+    name: smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22.13.0"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Build (production)
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: "https://placeholder.supabase.co"
+          VITE_SUPABASE_ANON_KEY: "placeholder-anon-key"
+
+      - name: Security - no hardcoded secrets
+        run: |
+          echo "Checking for hardcoded secrets..."
+          PATTERNS=(
+            "sk_live_"
+            "sk_test_"
+            "SUPABASE_SERVICE_ROLE_KEY\s*=\s*\"ey"
+            "service_role[\"']?\s*:\s*[\"']ey"
+            "GOCSPX-"
+          )
+          FOUND=0
+          for pattern in "${PATTERNS[@]}"; do
+            if grep -rE "$pattern" src/ scripts/ supabase/ --include="*.ts" --include="*.mjs" --include="*.sql" -l 2>/dev/null; then
+              echo "FAIL: Potential hardcoded secret pattern found: $pattern"
+              FOUND=$((FOUND + 1))
+            fi
+          done
+          if [ $FOUND -gt 0 ]; then
+            exit 1
+          fi
+          echo "OK: No hardcoded secrets found"
+
+      - name: Security - client uses only the anon key
+        run: |
+          echo "Checking browser client does not ship a service role key..."
+          if grep -nE "VITE_SUPABASE_SERVICE|SERVICE_ROLE" src/; then
+            echo "FAIL: Service role or VITE_ service key referenced in src/"
+            exit 1
+          fi
+          if ! grep -q "VITE_SUPABASE_ANON_KEY" src/lib/supabase.ts; then
+            echo "FAIL: Browser client must use VITE_SUPABASE_ANON_KEY"
+            exit 1
+          fi
+          echo "OK: Browser client uses anon key only"
+
+      - name: Security - no eval() in production code
+        run: |
+          echo "Checking for unsafe eval() usage..."
+          if grep -rn "\beval(" src/ --include="*.ts" | grep -v "node_modules"; then
+            echo "FAIL: eval() found in application code"
+            exit 1
+          fi
+          echo "OK: No eval() in src"
+
+      - name: Security - RLS deny policies in migrations
+        run: |
+          echo "Checking RLS deny policies..."
+          if ! grep -q "player_profiles deny client access" supabase/migrations/001_player_stats.sql; then
+            echo "FAIL: Missing player_profiles deny policy"
+            exit 1
+          fi
+          if ! grep -q "player_play_days deny client access" supabase/migrations/001_player_stats.sql; then
+            echo "FAIL: Missing player_play_days deny policy"
+            exit 1
+          fi
+          echo "OK: RLS deny policies present"
+
+      - name: Security - headers configured
+        run: |
+          echo "Checking security headers in vercel.json..."
+          for header in "X-Frame-Options" "X-Content-Type-Options" "Referrer-Policy" "Permissions-Policy"; do
+            if ! grep -q "$header" vercel.json; then
+              echo "FAIL: Missing security header: $header"
+              exit 1
+            fi
+          done
+          echo "OK: Security headers present"

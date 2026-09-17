@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.11
+
+- GitHub drošības pārbaudes: Gitleaks, npm audit (high+) un smoke build ar RLS/header checkiem
+- Vercel drošības galvenes (`X-Frame-Options`, `nosniff`, Referrer-Policy, Permissions-Policy)
+
 ## v0.1.10
 
 - Google ielogošanās, lietotājvārds un saglabāti rekordi; Scores logs ar top 20 (zelts, sudrabs, bronza)

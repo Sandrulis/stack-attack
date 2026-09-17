@@ -1,6 +1,6 @@
 {
   "name": "stack-attack",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "private": true,
   "type": "module",
   "description": "Siemens Stack Attack stila noliktavas spēle pārlūkā",
@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 3177 --host",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "node scripts/apply-migrations.mjs"
+    "db:migrate": "node scripts/apply-migrations.mjs",
+    "audit:check": "node scripts/audit-check.mjs"
   },
   "engines": {
     "node": ">=20"
