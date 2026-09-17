@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.15
+
+- Skaņas ikonā vilnīši un X paliek pa labi no skaļruņa, nevis virsū
+
 ## v0.1.14
 
 - Mobilajā HUD: Scores zem Pause, skaņas poga zem telferu skaita

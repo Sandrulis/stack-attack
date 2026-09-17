@@ -114,6 +114,7 @@ button:disabled {
   display: block;
   width: 22px;
   height: 22px;
+  overflow: visible;
 }
 
 .mute-btn .mute-icon-off {
