@@ -150,6 +150,44 @@ button:disabled {
   border-color: var(--accent);
 }
 
+.hud-right,
+.hud-cranes,
+.top-actions {
+  align-items: stretch;
+}
+
+.hud-right .cranes,
+.hud-right .mute-btn,
+.hud-right .top-actions button {
+  height: 48px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hud-left {
+  align-items: stretch;
+}
+
+.hud-left .stat {
+  height: 48px;
+  padding: 2px 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+}
+
+.hud-left .stat span {
+  line-height: 1.1;
+}
+
+.hud-left .stat strong {
+  font-size: 20px;
+  line-height: 1.1;
+}
+
 .stage {
   position: relative;
   width: min(800px, 100%);
@@ -214,12 +252,29 @@ button:disabled {
   font-size: clamp(22px, 4vw, 30px);
 }
 
-.board-card {
+.board-card,
+.settings-card {
   width: min(480px, 100%);
 }
 
 .board-card .board {
   max-height: min(360px, 52dvh);
+}
+
+.board-tabs {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.board-tabs button {
+  flex: 1;
+  padding: 8px 10px;
+}
+
+.board-tabs button.is-on {
+  background: #3c8527;
+  font-weight: 700;
 }
 
 .player-name {
@@ -306,6 +361,23 @@ button:disabled {
 }
 
 .board-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.board-identity {
+  display: grid;
+  min-width: 0;
+}
+
+.board-country {
+  color: currentColor;
+  opacity: 0.72;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -635,6 +707,17 @@ button:disabled {
   .mute-btn {
     padding: 8px 10px;
     width: 100%;
+  }
+
+  .hud-right .cranes,
+  .hud-right .mute-btn,
+  .hud-right .top-actions button {
+    height: auto;
+    padding: 8px 10px;
+  }
+
+  .hud-left .stat {
+    height: auto;
   }
 
   .cranes {

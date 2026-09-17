@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.16
+
+- Settings zem skaņas pogas: statistika un lietotājvārds, sākuma ekrāns paliek tīrs
+- Scores ar All / savas valsts filtru; valsts zem vārda; lidmašīna logos ar līdera plakātu
+- Datorā HUD pogas, Score un Best vienā augstumā
+
 ## v0.1.15
 
 - Skaņas ikonā vilnīši un X paliek pa labi no skaļruņa, nevis virsū

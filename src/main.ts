@@ -14,6 +14,7 @@ import { CANVAS_H, CANVAS_W, MAX_CRANES } from "./game/constants";
 import {
   createGame,
   hydrateBest,
+  hydrateLeader,
   isGameOverVisible,
   startRun,
   togglePause,
@@ -25,6 +26,7 @@ import { drawGame } from "./game/render";
 import type { User } from "@supabase/supabase-js";
 import {
   currentUser,
+  detectViewerCountry,
   finishPlayerRun,
   isSupabaseConfigured,
   isValidPlayerName,
@@ -33,6 +35,7 @@ import {
   NAME_MAX,
   normalizePlayerName,
   onAuthChange,
+  recordPlayerGeo,
   setPlayerName,
   signInWithGoogle,
   signOut,
@@ -47,6 +50,7 @@ const overlay = document.querySelector<HTMLElement>("#overlay")!;
 const pauseBtn = document.querySelector<HTMLButtonElement>("#pause-btn")!;
 const boardBtn = document.querySelector<HTMLButtonElement>("#board-btn")!;
 const muteBtn = document.querySelector<HTMLButtonElement>("#mute-btn")!;
+const settingsBtn = document.querySelector<HTMLButtonElement>("#settings-btn")!;
 const scoreEl = document.querySelector("#score")!;
 const bestEl = document.querySelector("#best")!;
 const cranesEl = document.querySelector("#cranes")!;
@@ -78,9 +82,13 @@ let nameBusy = false;
 let runSaved = false;
 let nameDraft = "";
 let didFocusName = false;
+let didForceSettings = false;
 let boardOpen = false;
+let settingsOpen = false;
 let boardLoading = false;
-let pausedForBoard = false;
+let overlayPaused = false;
+let boardScope: "all" | "country" = "all";
+let myCountry = "";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (ch) => {
@@ -101,9 +109,36 @@ function bumpOverlay() {
   overlayKey = "";
 }
 
+let geoBusy = false;
+
+function applyLeader() {
+  const top = board[0];
+  hydrateLeader(state, top?.name ?? "", top?.score ?? 0);
+}
+
+function rememberCountry(country: string) {
+  const next = country.trim();
+  if (!next || next === myCountry) return;
+  myCountry = next;
+  bumpOverlay();
+}
+
+async function fetchDisplayedBoard() {
+  const country = boardScope === "country" ? myCountry : "";
+  if (country) {
+    const [filtered, all] = await Promise.all([loadLeaderboard(country), loadLeaderboard()]);
+    board = filtered;
+    hydrateLeader(state, all[0]?.name ?? "", all[0]?.score ?? 0);
+    return;
+  }
+  board = await loadLeaderboard();
+  applyLeader();
+}
+
 async function refreshBoardList() {
   if (!isSupabaseConfigured()) {
     board = [];
+    applyLeader();
     bumpOverlay();
     return;
   }
@@ -111,7 +146,7 @@ async function refreshBoardList() {
   bumpOverlay();
   renderOverlay();
   try {
-    board = await loadLeaderboard();
+    await fetchDisplayedBoard();
   } catch (error) {
     authError = errorMessage(error, STR.authError);
   } finally {
@@ -120,12 +155,23 @@ async function refreshBoardList() {
   }
 }
 
-function openBoard() {
-  if (boardOpen) return;
+function pauseGameForHud() {
   if (state.phase === "playing") {
     togglePause(state);
-    pausedForBoard = true;
+    overlayPaused = true;
   }
+}
+
+function resumeGameIfHudClosed() {
+  if (boardOpen || settingsOpen) return;
+  if (overlayPaused && state.phase === "paused") togglePause(state);
+  overlayPaused = false;
+}
+
+function openBoard() {
+  if (boardOpen) return;
+  settingsOpen = false;
+  pauseGameForHud();
   boardOpen = true;
   bumpOverlay();
   void refreshBoardList();
@@ -134,8 +180,29 @@ function openBoard() {
 function closeBoard() {
   if (!boardOpen) return;
   boardOpen = false;
-  if (pausedForBoard && state.phase === "paused") togglePause(state);
-  pausedForBoard = false;
+  resumeGameIfHudClosed();
+  bumpOverlay();
+}
+
+function openSettings() {
+  if (settingsOpen) return;
+  boardOpen = false;
+  pauseGameForHud();
+  settingsOpen = true;
+  bumpOverlay();
+}
+
+function closeSettings() {
+  if (!settingsOpen) return;
+  settingsOpen = false;
+  resumeGameIfHudClosed();
+  bumpOverlay();
+}
+
+function closeHudOverlays() {
+  boardOpen = false;
+  settingsOpen = false;
+  resumeGameIfHudClosed();
   bumpOverlay();
 }
 
@@ -175,7 +242,7 @@ function nameFieldMarkup(ready: boolean): string {
 function boardMarkup(): string {
   const t = STR;
   if (board.length === 0) {
-    return `<p class="hint">${escapeHtml(t.boardEmpty)}</p>`;
+    return `<p class="hint">${escapeHtml(boardScope === "country" ? t.boardEmptyCountry : t.boardEmpty)}</p>`;
   }
   const medals = ["gold", "silver", "bronze"] as const;
   const rows = board
@@ -184,12 +251,30 @@ function boardMarkup(): string {
       const you = authUser && row.userId === authUser.id ? " you" : "";
       return `<li class="board-row ${medal}${you}">
         <span class="board-rank">${index + 1}</span>
-        <span class="board-name">${escapeHtml(row.name)}</span>
+        <span class="board-identity">
+          <span class="board-name">${escapeHtml(row.name)}</span>
+          ${row.country ? `<span class="board-country">${escapeHtml(row.country)}</span>` : ""}
+        </span>
         <span class="board-score">${row.score}</span>
       </li>`;
     })
     .join("");
   return `<ol class="board" aria-label="${escapeHtml(t.board)}">${rows}</ol>`;
+}
+
+function boardTabsMarkup(): string {
+  const t = STR;
+  const country = myCountry;
+  return `
+    <div class="board-tabs">
+      <button type="button" data-act="board-all" class="${boardScope === "all" ? "is-on" : "ghost"}">${escapeHtml(t.boardAll)}</button>
+      ${
+        country
+          ? `<button type="button" data-act="board-country" class="${boardScope === "country" ? "is-on" : "ghost"}">${escapeHtml(country)}</button>`
+          : ""
+      }
+    </div>
+  `;
 }
 
 function statsMarkup(showName = true): string {
@@ -214,9 +299,11 @@ async function refreshAccount(user: User | null) {
   didFocusName = false;
   if (!user) {
     stats = null;
-    board = [];
     nameDraft = "";
+    didForceSettings = false;
+    settingsOpen = false;
     bumpOverlay();
+    void refreshBoardList();
     return;
   }
   try {
@@ -224,10 +311,25 @@ async function refreshAccount(user: User | null) {
     if (stats) {
       hydrateBest(state, stats.bestScore);
       nameDraft = stats.displayName || suggestedNameFromUser(user);
+      if (!stats.nameSet && !didForceSettings) {
+        didForceSettings = true;
+        settingsOpen = true;
+        boardOpen = false;
+      }
     } else {
       nameDraft = suggestedNameFromUser(user);
     }
-    board = await loadLeaderboard();
+    if (stats?.country) rememberCountry(stats.country);
+    await fetchDisplayedBoard();
+    if (!geoBusy) {
+      geoBusy = true;
+      void recordPlayerGeo()
+        .then((country) => rememberCountry(country))
+        .catch(() => undefined)
+        .finally(() => {
+          geoBusy = false;
+        });
+    }
   } catch (error) {
     authError = errorMessage(error, STR.authError);
     nameDraft = suggestedNameFromUser(user);
@@ -250,6 +352,7 @@ async function bootAuth() {
     authReady = true;
     bumpOverlay();
   }
+  void detectViewerCountry().then((country) => rememberCountry(country));
   onAuthChange((user) => {
     void refreshAccount(user);
   });
@@ -266,6 +369,7 @@ function syncCopy() {
   document.querySelector("#legend-pause")!.textContent = t.legendPause;
   pauseBtn.textContent = t.pause;
   boardBtn.textContent = t.boardOpen;
+  settingsBtn.setAttribute("aria-label", t.settings);
   syncMuteButton();
   jumpBtn.querySelector(".jump-btn-label")!.textContent = t.jumpBtn;
   const rotateText = document.querySelector("#rotate-text");
@@ -307,8 +411,11 @@ function renderOverlay() {
     String(stats?.nameSet ?? ""),
     stats?.displayName ?? "",
     String(boardOpen),
+    String(settingsOpen),
     String(boardLoading),
-    board.map((row) => `${row.userId}:${row.score}`).join(","),
+    boardScope,
+    myCountry,
+    board.map((row) => `${row.userId}:${row.score}:${row.country}`).join(","),
   ].join("|");
   if (key === overlayKey) return;
   overlayKey = key;
@@ -321,10 +428,58 @@ function renderOverlay() {
           <h1>${escapeHtml(t.board)}</h1>
           <button type="button" data-act="close-board" class="ghost">${escapeHtml(t.boardClose)}</button>
         </div>
+        ${boardTabsMarkup()}
         ${boardLoading ? `<p class="hint">${escapeHtml(t.boardLoading)}</p>` : boardMarkup()}
         ${authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : ""}
       </div>
     `;
+    return;
+  }
+
+  if (settingsOpen) {
+    overlay.hidden = false;
+    let settingsBody = "";
+    if (!isSupabaseConfigured()) {
+      settingsBody = `<p class="how">${escapeHtml(t.setup)}</p>`;
+    } else if (!authReady || authBusy) {
+      settingsBody = `<p class="hint">${escapeHtml(t.signingIn)}</p>`;
+    } else if (!authUser) {
+      settingsBody = `
+        <p class="how">${escapeHtml(t.signInHow)}</p>
+        ${authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : ""}
+        <button type="button" data-act="google">${escapeHtml(t.signInGoogle)}</button>
+      `;
+    } else if (!stats) {
+      settingsBody = `
+        ${authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : `<p class="hint">${escapeHtml(t.signingIn)}</p>`}
+        <button type="button" data-act="signout" class="ghost">${escapeHtml(t.signOut)}</button>
+      `;
+    } else {
+      settingsBody = `
+        ${statsMarkup(false)}
+        ${needsUsername() ? `<p class="how">${escapeHtml(t.usernameHow)}</p>` : ""}
+        ${nameFieldMarkup(Boolean(stats.nameSet))}
+        ${authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : ""}
+        <button type="button" data-act="signout" class="ghost">${escapeHtml(t.signOut)}</button>
+      `;
+    }
+    overlay.innerHTML = `
+      <div class="overlay-card settings-card">
+        <div class="overlay-head">
+          <h1>${escapeHtml(t.settings)}</h1>
+          <button type="button" data-act="close-settings" class="ghost">${escapeHtml(t.boardClose)}</button>
+        </div>
+        ${settingsBody}
+      </div>
+    `;
+    if (needsUsername() && !didFocusName) {
+      didFocusName = true;
+      queueMicrotask(() => {
+        const field = overlay.querySelector<HTMLInputElement>("#player-name");
+        field?.focus();
+        field?.select();
+      });
+    }
     return;
   }
 
@@ -349,18 +504,15 @@ function renderOverlay() {
     } else if (needsUsername()) {
       body = `
         <p class="how">${escapeHtml(t.usernameHow)}</p>
-        ${nameFieldMarkup(false)}
         ${authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : ""}
-        <button type="button" data-act="signout" class="ghost">${escapeHtml(t.signOut)}</button>
+        <button type="button" data-act="start" disabled>${escapeHtml(t.start)}</button>
+        <button type="button" data-act="board" class="ghost">${escapeHtml(t.board)}</button>
       `;
     } else {
       body = `
-        ${statsMarkup(false)}
-        ${nameFieldMarkup(true)}
         ${authError ? `<p class="auth-error">${escapeHtml(authError)}</p>` : ""}
         <button type="button" data-act="start"${beginBusy ? " disabled" : ""}>${escapeHtml(t.start)}</button>
         <button type="button" data-act="board" class="ghost">${escapeHtml(t.board)}</button>
-        <button type="button" data-act="signout" class="ghost">${escapeHtml(t.signOut)}</button>
         <p class="hint">${escapeHtml(t.hint)}</p>
       `;
     }
@@ -377,14 +529,6 @@ function renderOverlay() {
         </dl>
       </div>
     `;
-    if (needsUsername() && !didFocusName) {
-      didFocusName = true;
-      queueMicrotask(() => {
-        const field = overlay.querySelector<HTMLInputElement>("#player-name");
-        field?.focus();
-        field?.select();
-      });
-    }
     return;
   }
 
@@ -422,6 +566,7 @@ function renderOverlay() {
 
 async function saveChosenName() {
   if (!authUser || nameBusy) return;
+  const firstName = !stats?.nameSet;
   const name = normalizePlayerName(nameDraft || overlay.querySelector<HTMLInputElement>("#player-name")?.value || "");
   nameDraft = name;
   if (!isValidPlayerName(name)) {
@@ -438,7 +583,8 @@ async function saveChosenName() {
     if (next) {
       stats = next;
       nameDraft = next.displayName;
-      board = await loadLeaderboard();
+      await fetchDisplayedBoard();
+      if (firstName) closeSettings();
     }
   } catch (error) {
     authError = errorMessage(error, STR.usernameError);
@@ -450,7 +596,7 @@ async function saveChosenName() {
 
 async function beginRun() {
   if (needsUsername()) {
-    void saveChosenName();
+    openSettings();
     return;
   }
   if (!canPlay() || beginBusy) return;
@@ -485,7 +631,7 @@ async function saveFinishedRun() {
       stats = next;
       hydrateBest(state, next.bestScore);
     }
-    board = await loadLeaderboard();
+    await fetchDisplayedBoard();
   } catch (error) {
     authError = errorMessage(error, STR.saveError);
   }
@@ -512,8 +658,8 @@ overlay.addEventListener("submit", (event) => {
 });
 
 overlay.addEventListener("click", (event) => {
-  if (boardOpen && event.target === overlay) {
-    closeBoard();
+  if ((boardOpen || settingsOpen) && event.target === overlay) {
+    closeHudOverlays();
     renderOverlay();
     return;
   }
@@ -522,6 +668,26 @@ overlay.addEventListener("click", (event) => {
   const act = btn.dataset.act;
   if (act === "close-board") {
     closeBoard();
+    renderOverlay();
+    return;
+  }
+  if (act === "board-all") {
+    if (boardScope !== "all") {
+      boardScope = "all";
+      void refreshBoardList();
+    }
+    return;
+  }
+  if (act === "board-country") {
+    if (!myCountry) return;
+    if (boardScope !== "country") {
+      boardScope = "country";
+      void refreshBoardList();
+    }
+    return;
+  }
+  if (act === "close-settings") {
+    closeSettings();
     renderOverlay();
     return;
   }
@@ -553,8 +719,10 @@ overlay.addEventListener("click", (event) => {
   if (act === "signout") {
     void signOut().then(() => {
       stats = null;
-      board = [];
+      didForceSettings = false;
+      settingsOpen = false;
       bumpOverlay();
+      void refreshBoardList();
     });
   }
   renderOverlay();
@@ -569,8 +737,8 @@ boardBtn.addEventListener("click", () => {
 
 pauseBtn.addEventListener("click", () => {
   unlockAudio();
-  if (boardOpen) {
-    closeBoard();
+  if (boardOpen || settingsOpen) {
+    closeHudOverlays();
     renderOverlay();
     return;
   }
@@ -582,13 +750,20 @@ muteBtn.addEventListener("click", () => {
   syncMuteButton();
 });
 
+settingsBtn.addEventListener("click", () => {
+  unlockAudio();
+  if (settingsOpen) closeSettings();
+  else openSettings();
+  renderOverlay();
+});
+
 function handleInput() {
   const stick = readStick();
   if (input.consumeAny(PAUSE_KEYS)) {
-    if (boardOpen) closeBoard();
+    if (boardOpen || settingsOpen) closeHudOverlays();
     else if (state.phase === "playing" || state.phase === "paused") togglePause(state);
   }
-  if (boardOpen) {
+  if (boardOpen || settingsOpen) {
     input.consumeAny(CONFIRM_KEYS);
     input.consumeAny(JUMP_KEYS);
     return;
@@ -598,7 +773,7 @@ function handleInput() {
   }
 
   if (state.phase === "title" && input.consumeAny(CONFIRM_KEYS)) {
-    if (needsUsername()) void saveChosenName();
+    if (needsUsername()) openSettings();
     else void beginRun();
   }
   if (isGameOverVisible(state) && input.consumeAny(CONFIRM_KEYS)) {

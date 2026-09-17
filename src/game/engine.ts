@@ -89,6 +89,16 @@ export type SkyCloud = {
   puffs: number;
 };
 
+export type BannerPlane = {
+  x: number;
+  y: number;
+  vx: number;
+  dir: Dir;
+  scale: number;
+  name: string;
+  score: number;
+};
+
 export type RainDrop = {
   x: number;
   y: number;
@@ -117,6 +127,10 @@ export type GameState = {
   popups: Popup[];
   skyClouds: SkyCloud[];
   cloudWait: number;
+  bannerPlane: BannerPlane | null;
+  planeWait: number;
+  leaderName: string;
+  leaderScore: number;
   rain: RainDrop[];
   storm: number;
   stormWait: number;
@@ -236,6 +250,42 @@ function updateSkyClouds(state: GameState, dt: number) {
   state.skyClouds = state.skyClouds.filter((cloud) => cloud.x > -320 && cloud.x < CANVAS_W + 320);
 }
 
+function spawnBannerPlane(state: GameState): BannerPlane {
+  const dir: Dir = Math.random() < 0.5 ? -1 : 1;
+  const scale = 0.78 + Math.random() * 0.32;
+  const width = 340 * scale;
+  return {
+    x: dir < 0 ? CANVAS_W + 36 : -width - 36,
+    y: 48 + Math.random() * 168,
+    vx: dir * (0.085 + Math.random() * 0.12),
+    dir,
+    scale,
+    name: state.leaderName,
+    score: state.leaderScore,
+  };
+}
+
+function nextPlaneWait(): number {
+  return 38000 + Math.random() * 52000;
+}
+
+function updateBannerPlane(state: GameState, dt: number) {
+  if (state.bannerPlane) {
+    state.bannerPlane.x += state.bannerPlane.vx * dt;
+    const plane = state.bannerPlane;
+    const gone = plane.dir < 0 ? plane.x < -420 : plane.x > CANVAS_W + 420;
+    if (gone) {
+      state.bannerPlane = null;
+      state.planeWait = nextPlaneWait();
+    }
+    return;
+  }
+  state.planeWait -= dt;
+  if (state.planeWait <= 0 && state.leaderName && state.leaderScore > 0) {
+    state.bannerPlane = spawnBannerPlane(state);
+  }
+}
+
 function nextStormWait(): number {
   return 22000 + Math.random() * 40000;
 }
@@ -307,6 +357,10 @@ export function createGame(): GameState {
     popups: [],
     skyClouds: [spawnSkyCloud(true), spawnSkyCloud(true)],
     cloudWait: 1800 + Math.random() * 2400,
+    bannerPlane: null,
+    planeWait: 12000 + Math.random() * 10000,
+    leaderName: "",
+    leaderScore: 0,
     rain: [],
     storm: 0,
     stormWait: nextStormWait(),
@@ -334,6 +388,11 @@ export function hydrateBest(state: GameState, best: number) {
   state.best = n;
   if (state.phase === "title") state.recordAtStart = n;
   saveBest(n);
+}
+
+export function hydrateLeader(state: GameState, name: string, score: number) {
+  state.leaderName = name.trim();
+  state.leaderScore = Math.max(0, score);
 }
 
 export function startRun(state: GameState, opts?: { globalBest?: number }) {
@@ -1080,6 +1139,7 @@ export function updateGame(state: GameState, dt: number) {
   updateParticles(state, dt);
   if (state.phase !== "paused") {
     updateSkyClouds(state, dt);
+    updateBannerPlane(state, dt);
     updateWeather(state, dt);
     updateFireworks(state, dt);
   }

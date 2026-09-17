@@ -1,6 +1,6 @@
 # Stack Attack
 
-**Current version:** `0.1.15`
+**Current version:** `0.1.16`
 
 **Stack Attack** stila 2D spēle pārlūkā. Cilvēciņš stumj kastes, telferis tās met no augšas visā laukuma platumā, un pilna apakšējā rinda pazūd ar +1 punktu.
 
@@ -16,7 +16,7 @@ npm run dev
 
 Ievadi `SUPABASE_URL` un `SUPABASE_ANON_KEY` failā `.env.local` (tie paši nosaukumi Vercel Environment Variables). Atver [http://localhost:3177](http://localhost:3177).
 
-Pirms spēles jābūt Google kontam. Pēc ielogošanās jāapstiprina lietotājvārds (noklusējumā e-pasta daļa pirms `@`, to var nomainīt). Saglabājas šodienas spēļu skaits, kopējais skaits un rekords. **Scores** atver top 20: 1. zelts, 2. sudrabs, 3. bronza.
+Pirms spēles jābūt Google kontam. Pēc ielogošanās lietotājvārdu, šodienas un kopējo spēļu skaitu redz **Settings** (zobrats zem skaņas pogas). **Scores** atver top 20 (All vai sava valsts): 1. zelts, 2. sudrabs, 3. bronza.
 
 ## Vadība
 
@@ -28,6 +28,7 @@ Pirms spēles jābūt Google kontam. Pēc ielogošanās jāapstiprina lietotājv
 | Poga **Jump** | Lēciens uz vietas; kopā ar džoistiku - uz priekšu (telefonā) |
 | `Esc` / **Pause** | Pauze |
 | Skaņas poga | Ieslēdz / izslēdz skaņu (zem telferu punktiem) |
+| Zobrats | Settings: šodienas/kopējās spēles un lietotājvārds |
 
 ## Spēles noteikumi
 
@@ -40,6 +41,7 @@ Pirms spēles jābūt Google kontam. Pēc ielogošanās jāapstiprina lietotājv
 - Aiz logiem ik pa laikam peld balti, gubaini mākoņi dažādos izmēros. Gariem starplaikiem var uznākt negaiss ar tumsu un lietu.
 - Ja šajā spēlē pārspēj savu rekordu, aiz logiem paliek sarkans saulriets (saule pa pusei pie apakšas) līdz spēles beigām.
 - Ja pārspēj visaugstāko rekordu visiem spēlētājiem, aiz logiem paliek nakts un visu laiku šauj salūts.
+- Scores sarakstā zem vārda rādās valsts (no IP). Reti pa logiem palido lidmašīna ar līdera vārdu un punktiem.
 
 ## Komandas
 

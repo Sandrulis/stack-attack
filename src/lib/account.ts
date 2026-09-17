@@ -8,6 +8,7 @@ export type PlayerStats = {
   globalBest: number;
   displayName: string;
   nameSet: boolean;
+  country: string;
 };
 
 export type BoardRow = {
@@ -15,6 +16,7 @@ export type BoardRow = {
   name: string;
   score: number;
   plays: number;
+  country: string;
 };
 
 export const NAME_MIN = 2;
@@ -27,6 +29,7 @@ type RpcStats = {
   global_best?: number;
   display_name?: string;
   name_set?: boolean;
+  country?: string;
 };
 
 type RpcBoardRow = {
@@ -34,6 +37,7 @@ type RpcBoardRow = {
   display_name?: string;
   best_score?: number;
   total_plays?: number;
+  country?: string;
 };
 
 function asInt(value: unknown, fallback = 0): number {
@@ -50,6 +54,7 @@ function readStats(raw: unknown): PlayerStats {
     globalBest: asInt(data.global_best),
     displayName: String(data.display_name || "Player"),
     nameSet: Boolean(data.name_set),
+    country: String(data.country || "").trim(),
   };
 }
 
@@ -163,10 +168,12 @@ export async function finishPlayerRun(score: number): Promise<PlayerStats | null
   return readStats(data);
 }
 
-export async function loadLeaderboard(): Promise<BoardRow[]> {
+export async function loadLeaderboard(country = ""): Promise<BoardRow[]> {
   const supabase = getSupabase();
   if (!supabase) return [];
-  const { data, error } = await supabase.rpc("player_leaderboard");
+  const { data, error } = await supabase.rpc("player_leaderboard", {
+    p_country: country.trim() || null,
+  });
   if (error) throw error;
   const parsed = typeof data === "string" ? JSON.parse(data) : data;
   const rows = Array.isArray(parsed) ? parsed : [];
@@ -175,7 +182,49 @@ export async function loadLeaderboard(): Promise<BoardRow[]> {
     name: String(row.display_name || "Player"),
     score: asInt(row.best_score),
     plays: asInt(row.total_plays),
+    country: String(row.country || "").trim(),
   }));
+}
+
+export async function recordPlayerGeo(): Promise<string> {
+  const supabase = getSupabase();
+  const geo = await lookupClientGeo();
+  if (!geo) return "";
+  if (supabase) {
+    const { error } = await supabase.rpc("set_player_geo", {
+      p_ip: geo.ip,
+      p_country: geo.country,
+      p_country_code: geo.countryCode,
+    });
+    if (error) throw error;
+  }
+  return geo.country;
+}
+
+export async function detectViewerCountry(): Promise<string> {
+  const geo = await lookupClientGeo();
+  return geo?.country ?? "";
+}
+
+async function lookupClientGeo(): Promise<{ ip: string; country: string; countryCode: string } | null> {
+  try {
+    const res = await fetch("https://ipwho.is/", { signal: AbortSignal.timeout(4000) });
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      success?: boolean;
+      ip?: string;
+      country?: string;
+      country_code?: string;
+    };
+    if (data.success === false) return null;
+    const ip = String(data.ip || "").trim();
+    const country = String(data.country || "").trim();
+    const countryCode = String(data.country_code || "").trim();
+    if (!ip && !country) return null;
+    return { ip, country, countryCode };
+  } catch {
+    return null;
+  }
 }
 
 export { isSupabaseConfigured };

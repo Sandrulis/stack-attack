@@ -207,6 +207,7 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
       ctx.globalAlpha = 1;
     }
     drawWindowClouds(ctx, state, winY, Math.max(storm, night * 0.85));
+    drawBannerPlane(ctx, state, winY);
     drawRain(ctx, state, storm);
     drawFireworks(ctx, state.fireworks, night);
     ctx.restore();
@@ -254,6 +255,99 @@ function drawWindowClouds(ctx: CanvasRenderingContext2D, state: GameState, winY:
       );
     }
   }
+}
+
+function drawBannerPlane(ctx: CanvasRenderingContext2D, state: GameState, winY: number) {
+  const plane = state.bannerPlane;
+  if (!plane) return;
+  const s = plane.scale;
+  const y = winY + plane.y;
+  const facingLeft = plane.dir < 0;
+  const bodyW = 92 * s;
+  const bodyH = 28 * s;
+  const bannerW = 188 * s;
+  const bannerH = 36 * s;
+  const hitch = 22 * s;
+  const bodyX = facingLeft ? plane.x : plane.x + hitch + bannerW;
+  const bannerX = facingLeft ? plane.x + bodyW + hitch : plane.x;
+  const hitchX = facingLeft ? bodyX + bodyW : bannerX + bannerW;
+
+  ctx.save();
+  ctx.translate(bodyX + bodyW / 2, y + bodyH / 2);
+  if (!facingLeft) ctx.scale(-1, 1);
+  ctx.translate(-bodyW / 2, -bodyH / 2);
+
+  const spin = (state.time / 70) % (Math.PI * 2);
+  ctx.strokeStyle = "#3a3a3a";
+  ctx.lineWidth = Math.max(2, 2.4 * s);
+  ctx.beginPath();
+  ctx.moveTo(-6 * s, bodyH * 0.48 + Math.cos(spin) * 11 * s);
+  ctx.lineTo(8 * s, bodyH * 0.48 - Math.cos(spin) * 11 * s);
+  ctx.moveTo(-6 * s, bodyH * 0.48 + Math.sin(spin) * 11 * s);
+  ctx.lineTo(8 * s, bodyH * 0.48 - Math.sin(spin) * 11 * s);
+  ctx.stroke();
+
+  box(ctx, 8 * s, 8 * s, 70 * s, 16 * s, "#f2c14d", "#ffe08a", "#c8871f");
+  box(ctx, 8 * s, 14 * s, 70 * s, 5 * s, "#e08928", "#f2a84a", "#b86a16");
+  box(ctx, 64 * s, 2 * s, 18 * s, 14 * s, "#f2c14d", "#ffe08a", "#c8871f");
+  box(ctx, 72 * s, 0, 10 * s, 18 * s, "#f2c14d", "#ffe08a", "#c8871f");
+  box(ctx, 22 * s, 18 * s, 38 * s, 8 * s, "#d8a43a", "#f2c14d", "#a8741c");
+  oval(ctx, 18 * s, 14 * s, 8 * s, 8 * s, "#7ec8ea");
+  ctx.fillStyle = "#2c2c2c";
+  ctx.fillRect(4 * s, 10 * s, 8 * s, 8 * s);
+  oval(ctx, 24 * s, 28 * s, 5 * s, 5 * s, "#2c2c2c");
+  oval(ctx, 24 * s, 28 * s, 3 * s, 3 * s, "#f4d03f");
+  ctx.restore();
+
+  ctx.strokeStyle = "#2c2c2c";
+  ctx.lineWidth = Math.max(2, 2 * s);
+  ctx.beginPath();
+  ctx.moveTo(hitchX, y + bannerH * 0.22);
+  ctx.lineTo(facingLeft ? hitchX + hitch : hitchX - hitch, y + bannerH * 0.5);
+  ctx.lineTo(hitchX, y + bannerH * 0.78);
+  ctx.stroke();
+
+  const tail = 16 * s;
+  ctx.beginPath();
+  if (facingLeft) {
+    ctx.moveTo(bannerX, y);
+    ctx.lineTo(bannerX + bannerW - tail, y);
+    ctx.lineTo(bannerX + bannerW, y + bannerH / 2);
+    ctx.lineTo(bannerX + bannerW - tail, y + bannerH);
+    ctx.lineTo(bannerX, y + bannerH);
+  } else {
+    ctx.moveTo(bannerX + bannerW, y);
+    ctx.lineTo(bannerX + tail, y);
+    ctx.lineTo(bannerX, y + bannerH / 2);
+    ctx.lineTo(bannerX + tail, y + bannerH);
+    ctx.lineTo(bannerX + bannerW, y + bannerH);
+  }
+  ctx.closePath();
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.lineWidth = Math.max(2, 2 * s);
+  ctx.strokeStyle = "#d0d0d0";
+  ctx.stroke();
+  ctx.fillStyle = "#e24a3a";
+  if (facingLeft) ctx.fillRect(bannerX, y, 4 * s, bannerH);
+  else ctx.fillRect(bannerX + bannerW - 4 * s, y, 4 * s, bannerH);
+
+  const textX = facingLeft ? bannerX + 10 * s : bannerX + tail + 8 * s;
+  const textW = bannerW - tail - 18 * s;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(bannerX + (facingLeft ? 6 * s : tail), y, textW + 10 * s, bannerH);
+  ctx.clip();
+  ctx.fillStyle = "#1a1a1a";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  const nameSize = Math.max(10, 11 * s);
+  const scoreSize = Math.max(8, 9 * s);
+  ctx.font = `700 ${nameSize}px ui-monospace, monospace`;
+  ctx.fillText(plane.name, textX, y + 4 * s, textW);
+  ctx.font = `700 ${scoreSize}px ui-monospace, monospace`;
+  ctx.fillText(String(plane.score), textX, y + 4 * s + nameSize + 4 * s, textW);
+  ctx.restore();
 }
 
 function drawRain(ctx: CanvasRenderingContext2D, state: GameState, storm: number) {
