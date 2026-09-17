@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.12
+
+- Commit author e-pasts, lai Vercel nebloķētu deploy
+
 ## v0.1.11
 
 - GitHub drošības pārbaudes: Gitleaks, npm audit (high+) un smoke build ar RLS/header checkiem

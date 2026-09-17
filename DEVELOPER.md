@@ -29,6 +29,13 @@ Shippable izmaiņām vispirms bump `package.json`, `README.md` un `CHANGELOG.md`
 
 Pirms commit: `npm run typecheck` un `npm run build`.
 
+Git author e-pastam jābūt derīgam (ne `datorvārds.local`), citādi Vercel bloķē deploy. Iestati to lokāli (ne čatā ar `git config` agentam):
+
+```
+git config --global user.email "nezinams.imeginajums@gmail.com"
+git config --global user.name "Sandris Ozols-Ozoliņš"
+```
+
 ## GitHub drošības pārbaudes
 
 Katram push: **Secret scan** (Gitleaks), **Security audit** (`npm run audit:check`), **Security smoke** (typecheck, build, RLS, nav service role klientā, `vercel.json` galvenes).
