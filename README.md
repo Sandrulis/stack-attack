@@ -1,6 +1,6 @@
 # Stack Attack
 
-**Current version:** `0.1.12`
+**Current version:** `0.1.13`
 
 **Stack Attack** stila 2D spēle pārlūkā. Cilvēciņš stumj kastes, telferis tās met no augšas visā laukuma platumā, un pilna apakšējā rinda pazūd ar +1 punktu.
 
@@ -14,7 +14,7 @@ npm install
 npm run dev
 ```
 
-Ievadi Supabase URL un anon key failā `.env.local`. Atver [http://localhost:3177](http://localhost:3177).
+Ievadi `SUPABASE_URL` un `SUPABASE_ANON_KEY` failā `.env.local` (tie paši nosaukumi Vercel Environment Variables). Atver [http://localhost:3177](http://localhost:3177).
 
 Pirms spēles jābūt Google kontam. Pēc ielogošanās jāapstiprina lietotājvārds (noklusējumā e-pasta daļa pirms `@`, to var nomainīt). Saglabājas šodienas spēļu skaits, kopējais skaits un rekords. **Scores** atver top 20: 1. zelts, 2. sudrabs, 3. bronza.
 

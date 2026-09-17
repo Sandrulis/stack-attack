@@ -14,7 +14,7 @@ Spēle ir Vite + TypeScript + Canvas. Galvenā loģika: `src/game/engine.ts`, z�
 
 1. Izveido projektu un ieslēdz **Google** provider (`Authentication → Providers`).
 2. Redirect URL: `http://localhost:3177` un produkcijas origin.
-3. `.env.local` aizpildi no `env.example`: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, un migrācijām `SUPABASE_DB_PASSWORD` (Database password, ne anon key).
+3. `.env.local` (un Vercel) aizpildi: `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Migrācijām lokāli `SUPABASE_DB_PASSWORD` (Database password, ne anon key). Nepievieno Vercel DB paroli vai service role.
 4. `npm run db:migrate` — es to palaižu pats pēc jauniem `supabase/migrations/*.sql`.
 
 Tabulas `player_profiles` un `player_play_days` ir ar RLS deny; klients iet caur `ensure_player`, `set_player_name`, `start_player_run`, `finish_player_run`, `player_leaderboard`.

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.13
+
+- Vercel un lokāli env: `SUPABASE_URL` un `SUPABASE_ANON_KEY` bez `VITE_` prefiksa
+
 ## v0.1.12
 
 - Commit author e-pasts, lai Vercel nebloķētu deploy

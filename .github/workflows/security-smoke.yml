@@ -29,8 +29,8 @@ jobs:
       - name: Build (production)
         run: npm run build
         env:
-          VITE_SUPABASE_URL: "https://placeholder.supabase.co"
-          VITE_SUPABASE_ANON_KEY: "placeholder-anon-key"
+          SUPABASE_URL: "https://placeholder.supabase.co"
+          SUPABASE_ANON_KEY: "placeholder-anon-key"
 
       - name: Security - no hardcoded secrets
         run: |
@@ -57,12 +57,12 @@ jobs:
       - name: Security - client uses only the anon key
         run: |
           echo "Checking browser client does not ship a service role key..."
-          if grep -nE "VITE_SUPABASE_SERVICE|SERVICE_ROLE" src/; then
-            echo "FAIL: Service role or VITE_ service key referenced in src/"
+          if grep -nE "SERVICE_ROLE|SERVICE_KEY" src/; then
+            echo "FAIL: Service role key referenced in src/"
             exit 1
           fi
-          if ! grep -q "VITE_SUPABASE_ANON_KEY" src/lib/supabase.ts; then
-            echo "FAIL: Browser client must use VITE_SUPABASE_ANON_KEY"
+          if ! grep -q "SUPABASE_ANON_KEY" src/lib/supabase.ts; then
+            echo "FAIL: Browser client must use SUPABASE_ANON_KEY"
             exit 1
           fi
           echo "OK: Browser client uses anon key only"

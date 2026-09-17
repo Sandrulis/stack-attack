@@ -1,6 +1,6 @@
 {
   "name": "stack-attack",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "private": true,
   "type": "module",
   "description": "Siemens Stack Attack stila noliktavas spēle pārlūkā",

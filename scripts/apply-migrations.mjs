@@ -30,7 +30,7 @@ function getProjectRef(url) {
 function getConnectionCandidates(env) {
   if (env.DATABASE_URL) return [env.DATABASE_URL];
 
-  const url = env.VITE_SUPABASE_URL;
+  const url = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
   const password = env.SUPABASE_DB_PASSWORD;
 
   if (!url || !password) {
