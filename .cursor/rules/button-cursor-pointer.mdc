@@ -1,19 +1,19 @@
 ---
-description: Visām pogām un klikšķināmiem elementiem cursor:pointer
+description: Clickable buttons and controls use cursor:pointer
 alwaysApply: true
 ---
 
-# Pogas — cursor: pointer
+# Buttons — cursor: pointer
 
-Visām **klikšķināmām pogām** jāparāda rokas kursors (`cursor: pointer`).
+Every **clickable button** must show a hand cursor (`cursor: pointer`).
 
-## Vienots avots
+## Single source
 
-Bāzes stils ir **`src/style.css`** — visi `button` un klikšķināmie taustiņi automātiski saņem `cursor: pointer`. Jaunām pogām **nav jāatkārto** `cursor-pointer`, ja vien nav īpaša izņēmuma.
+The base style is **`src/style.css`** — all `button` elements and clickable keys get `cursor: pointer` automatically. New buttons **do not** need a repeated `cursor-pointer` class unless there is a special case.
 
-Atspējotām pogām: `cursor: not-allowed`.
+Disabled buttons: `cursor: not-allowed`.
 
-## Ko nedarīt
+## Do not
 
-- ❌ Poga bez rokas kursora (noklusējuma bulta)
-- ❌ `cursor-default` uz aktīvām pogām
+- ❌ A button with the default arrow cursor
+- ❌ `cursor-default` on active buttons

@@ -5,9 +5,9 @@ alwaysApply: true
 
 # GitHub commits — version tag required
 
-When the user asks to **commit**, **push**, **update GitHub**, or similar, follow `DEVELOPER.md` → Versijas un commit.
+When the user asks to **commit**, **push**, **update GitHub**, or similar, follow `DEVELOPER.md` → Versioning and commits.
 
-1. Shippable work → bump `package.json`, `README.md` un `CHANGELOG.md` (patch +0.0.1).
+1. Shippable work → bump `package.json`, `README.md` and `CHANGELOG.md` (patch +0.0.1).
 2. Verify with `npm run typecheck` and `npm run build`.
 3. Commit message: `Short description of the change. vX.Y.Z`
 4. Do not push unless the user explicitly asks.

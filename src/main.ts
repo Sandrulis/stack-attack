@@ -361,6 +361,8 @@ async function bootAuth() {
 function syncCopy() {
   const t = STR;
   document.documentElement.lang = "en";
+  document.title = t.title;
+  document.querySelector("#brand-title")!.textContent = t.title;
   document.querySelector("#subtitle")!.textContent = t.subtitle;
   document.querySelector("#score-label")!.textContent = t.score;
   document.querySelector("#best-label")!.textContent = t.best;

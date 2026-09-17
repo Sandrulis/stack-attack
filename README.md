@@ -1,12 +1,10 @@
-# Stack Attack
+# BoxDrop
 
-**Current version:** `0.1.17`
+**Current version:** `0.1.18`
 
-**Stack Attack** stila 2D spēle pārlūkā. Cilvēciņš stumj kastes, telferis tās met no augšas visā laukuma platumā, un pilna apakšējā rinda pazūd ar +1 punktu.
+**BoxDrop** is a 2D warehouse game in the browser. Slogan: *Push. Stack. Survive.* Push crates, dodge drops from overhead cranes, and clear a full bottom row for +1.
 
-Iedvesma: [Stack Project uz itch.io](https://masterpiet98.itch.io/stack-project) un oriģinālā Siemens spēle.
-
-## Palaist
+## Run
 
 ```bash
 cp env.example .env.local
@@ -14,36 +12,36 @@ npm install
 npm run dev
 ```
 
-Ievadi `SUPABASE_URL` un `SUPABASE_ANON_KEY` failā `.env.local` (tie paši nosaukumi Vercel Environment Variables). Atver [http://localhost:3177](http://localhost:3177).
+Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env.local` (same names on Vercel Environment Variables). Open [http://localhost:3177](http://localhost:3177).
 
-Pirms spēles jābūt Google kontam. Pēc ielogošanās lietotājvārdu, šodienas un kopējo spēļu skaitu redz **Settings** (zobrats zem skaņas pogas). **Scores** atver top 20 (All vai sava valsts): 1. zelts, 2. sudrabs, 3. bronza.
+Sign in with Google before you play. After login, username and play counts are in **Settings** (gear under the mute button). **Scores** opens the top 20 (All or your country): 1st gold, 2nd silver, 3rd bronze.
 
-## Vadība
+## Controls
 
-| Taustiņš | Darbība |
+| Input | Action |
 |---|---|
-| `←` `→` | Iet un stumt kasti (datorā) |
-| `←`/`→` + `Space` | Lēciens uz priekšu, uz kastes vai no tās (datorā) |
-| Džoistiks | Iet un stumt pa kreisi/pa labi (telefonā) |
-| Poga **Jump** | Lēciens uz vietas; kopā ar džoistiku - uz priekšu (telefonā) |
-| `Esc` / **Pause** | Pauze |
-| Skaņas poga | Ieslēdz / izslēdz skaņu (zem telferu punktiem) |
-| Zobrats | Settings: šodienas/kopējās spēles un lietotājvārds |
+| `←` `→` | Walk and push a crate (desktop) |
+| `←`/`→` + `Space` | Jump forward, onto a crate, or off it (desktop) |
+| Joystick | Walk and push left or right (phone) |
+| **Jump** | Hop in place; with the joystick, jump forward (phone) |
+| `Esc` / **Pause** | Pause |
+| Mute | Toggle sound (under the crane count) |
+| Gear | Settings: today's/total plays and username |
 
-## Spēles noteikumi
+## Rules
 
-- Telferi brauc pa sliedi visā ekrāna platumā (ar vairākiem - arī abos virzienos) un randomā nomet kastes. Ja nav vietas, telferis riņķo šurpu turpu, līdz nomet; pēc nomešanas tukšais telferis aizbrauc divreiz ātrāk.
-- Spēles lauks ir **6×10**; septīto rindu ved tikai telferis.
-- Kastes krīt, līdz atduras pret grīdu vai citu kasti. Vienā kolonnā vienlaikus krīt tikai viena kaste - nākamā sāk krist tikai pēc nosēšanās.
-- Cilvēciņu var saspiest krītoša kaste - tad spēle beidzas.
-- Kad apakšējā rinda ir pilna, tā pazūd uzreiz, spēle neapstājas, kastes virs tās krīt uz leju pa vienai katrā kolonnā, un tiek pieskaitīts **1 punkts**.
-- Ar punktiem parādās līdz **4 telferiem**, un nomešana kļūst ātrāka.
-- Aiz logiem ik pa laikam peld balti, gubaini mākoņi dažādos izmēros. Gariem starplaikiem var uznākt negaiss ar tumsu un lietu.
-- Ja šajā spēlē pārspēj savu rekordu, aiz logiem paliek sarkans saulriets (saule pa pusei pie apakšas) līdz spēles beigām.
-- Ja pārspēj visaugstāko rekordu visiem spēlētājiem, aiz logiem paliek nakts un visu laiku šauj salūts.
-- Scores sarakstā zem vārda rādās valsts (no IP). Reti pa logiem palido lidmašīna ar līdera vārdu un punktiem.
+- Cranes travel the full rail (with several, in both directions) and drop crates at random. If a column is blocked, the crane patrols until it can drop; after a drop the empty crane leaves twice as fast.
+- The playfield is **6×10**; only a crane uses a seventh row.
+- Crates fall until they hit the floor or another crate. Only one crate may fall in a column at a time - the next starts after it lands.
+- A falling crate can crush you - then the game is over.
+- When the bottom row is full it clears at once, play continues, crates above fall one at a time per column, and you score **+1**.
+- Score brings up to **4 cranes**, and drops get faster.
+- White puffy clouds sometimes drift behind the windows. After long gaps a storm can bring darkness and rain.
+- Beat your own record and the windows stay on a red sunset (sun half below the sill) until the run ends.
+- Beat the global high score and the windows stay night with fireworks.
+- Scores list a country under each name (from IP). A banner plane sometimes flies past with the leader name and score.
 
-## Komandas
+## Commands
 
 ```bash
 npm run typecheck

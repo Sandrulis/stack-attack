@@ -1,92 +1,97 @@
 # Changelog
 
+## v0.1.18
+
+- Game title is BoxDrop; slogan is Push. Stack. Survive.
+- All docs, rules, and UI copy are English only
+
 ## v0.1.17
 
-- Vienā kolonnā vienlaikus krīt tikai viena kaste; telferis un gravitācija gaida, līdz tā nosēžas
+- Only one crate falls in a column at a time; cranes and gravity wait until it lands
 
 ## v0.1.16
 
-- Settings zem skaņas pogas: statistika un lietotājvārds, sākuma ekrāns paliek tīrs
-- Scores ar All / savas valsts filtru; valsts zem vārda; lidmašīna logos ar līdera plakātu
-- Datorā HUD pogas, Score un Best vienā augstumā
+- Settings under the mute button: stats and username, so the start screen stays clean
+- Scores with All / own-country filter; country under the name; banner plane in the windows with the leader
+- Desktop HUD buttons, Score, and Best share the same height
 
 ## v0.1.15
 
-- Skaņas ikonā vilnīši un X paliek pa labi no skaļruņa, nevis virsū
+- Mute icon waves and X stay to the right of the speaker, not on top of it
 
 ## v0.1.14
 
-- Mobilajā HUD: Scores zem Pause, skaņas poga zem telferu skaita
+- Mobile HUD: Scores under Pause, mute under the crane count
 
 ## v0.1.13
 
-- Vercel un lokāli env: `SUPABASE_URL` un `SUPABASE_ANON_KEY` bez `VITE_` prefiksa
+- Vercel and local env: `SUPABASE_URL` and `SUPABASE_ANON_KEY` without a `VITE_` prefix
 
 ## v0.1.12
 
-- Commit author e-pasts, lai Vercel nebloķētu deploy
+- Valid commit author email so Vercel does not block the deploy
 
 ## v0.1.11
 
-- GitHub drošības pārbaudes: Gitleaks, npm audit (high+) un smoke build ar RLS/header checkiem
-- Vercel drošības galvenes (`X-Frame-Options`, `nosniff`, Referrer-Policy, Permissions-Policy)
+- GitHub security checks: Gitleaks, npm audit (high+), and a smoke build with RLS/header checks
+- Vercel security headers (`X-Frame-Options`, `nosniff`, Referrer-Policy, Permissions-Policy)
 
 ## v0.1.10
 
-- Google ielogošanās, lietotājvārds un saglabāti rekordi; Scores logs ar top 20 (zelts, sudrabs, bronza)
-- Visu laiku rekords paliek naktī ar salūtu logos; `npm run db:migrate` Supabase SQL
+- Google sign-in, username, and saved records; Scores overlay with top 20 (gold, silver, bronze)
+- A global record keeps night and fireworks in the windows; `npm run db:migrate` for Supabase SQL
 
 ## v0.1.9
 
-- Spēles lauks 6×10, septīto rindu ved tikai telferis; bez vietas telferis riņķo, līdz nomet
-- Līdz 4 telferiem; ik pa laikam negaiss ar lietu, pēc rekorda paliek saulriets ar sauli pa pusei
+- Playfield 6×10; only a crane uses a seventh row; if blocked, the crane patrols until it can drop
+- Up to 4 cranes; occasional storms with rain; after a record the sunset stays with the sun half down
 
 ## v0.1.8
 
-- Augšējā rindā ar lēcienu var uzmest kasti sānis, tajā pašā līmenī ar telfera kasti
-- Pēc nomešanas tukšais telferis aizbrauc divreiz ātrāk
+- On the top row, a jump can shove a crate sideways at the same height as a crane drop
+- After a drop the empty crane leaves twice as fast
 
 ## v0.1.7
 
-- Aiz noliktavas logiem ik pa laikam peld balti, gubaini mākoņi dažādos izmēros
+- White puffy clouds of mixed sizes sometimes drift behind the warehouse windows
 
 ## v0.1.6
 
-- Pilna rinda pazūd plūdeni, neapstādinot telferus un pārējo spēli
-- Pārspējot rekordu, aiz noliktavas logiem parādās sarkans saulriets
+- A full row clears smoothly without pausing cranes or the rest of the game
+- Beating a record shows a red sunset behind the warehouse windows
 
 ## v0.1.5
 
-- Mobilais džoistiks par 15% šaurāks, lai mazāk aizsedz laukumu
+- Mobile joystick 15% narrower so it covers less of the playfield
 
 ## v0.1.4
 
-- Lēciens uz priekšu tikai ar bultu vai džoistiku; no kastes var aizlekt uz nākamo, krītošu kasti var stumt arī gaisā
-- Vairāki telferi iet pilnu ekrānu abos virzienos; iOS stila zaļš džoistiks un Jump poga
-- Tikai angļu UI; datorā Score/Best galvenē, bez logotipa
+- Forward jump only with an arrow or the joystick; hop from crate to crate; falling crates can be pushed in the air
+- Several cranes patrol the full screen both ways; iOS-style green joystick and Jump button
+- English-only UI; Score/Best in the desktop header, no logo
 
 ## v0.1.3
 
-- Cilvēciņš ar navy hoodie, kantainu galvu un cepuri; lēciens uz kastes bez pauzes gaisā
-- Krītoša kaste saspiež no galvas, nevis cauri kājām
-- Vienāds augstums staigājot un apstājoties, kājas uz kastes bez spraugas
+- Worker in a navy hoodie with a boxy head and cap; jump onto a crate without hanging in the air
+- A falling crate crushes from the head, not through the legs
+- Same height when walking and idle; feet sit on crates with no gap
 
 ## v0.1.2
 
-- Kastēm tumša kvadrātveida maliņa un aizdare, lai saliktas kastes paliek atšķiramas
-- Plūdena kastes krišana bez rūtiņu saraustīšanās
-- Saspiešanā cilvēciņš saplacinās zem kastes, galva un rokas izlien no malām
+- Crates get a dark square rim and latch so stacked crates stay distinct
+- Smooth crate falls without cell snapping
+- On crush the worker flattens under the crate, with head and hands peeking out
 
 ## v0.1.1
 
-- Plūdenāka, lēnāka cilvēciņa staigāšana un stumšana, ar roku piespiešanu pret kasti
-- Mobilajā HUD punkti kreisajā pusē, telferi labajā zem pauzes; līdz 5 telferiem
-- Kastes bez atstarpēm, jauns aizdares dizains; džoistiks tikai pa kreisi un pa labi
+- Smoother, slower walk and push, with the hand pressing against the crate
+- Mobile HUD: score on the left, cranes on the right under Pause; up to 5 cranes
+- Crates with no gaps, new latch design; joystick only left and right
 
 ## v0.1.0
 
-- Pirmā spēlējamā versija: telferis, kastes, stumšana, lēcieni un apakšējās rindas tīrīšana
-- Siemens LCD estētika, skaņas, rekords un skārienjutīga tastatūra
+- First playable version: cranes, crates, pushing, jumping, and bottom-row clears
+- LCD warehouse look, sound, high score, and a touch keyboard
 
 ## Unreleased
 

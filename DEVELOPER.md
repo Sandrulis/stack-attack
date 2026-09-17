@@ -1,6 +1,6 @@
 # Developer notes
 
-## Palaist
+## Run
 
 ```bash
 cp env.example .env.local
@@ -8,34 +8,34 @@ npm install
 npm run dev
 ```
 
-Spēle ir Vite + TypeScript + Canvas. Galvenā loģika: `src/game/engine.ts`, zīmēšana: `src/game/render.ts`, mobilais džoistiks: `src/joystick.ts`. Auth un statistika: `src/lib/account.ts`.
+The game is Vite + TypeScript + Canvas. Core logic: `src/game/engine.ts`, drawing: `src/game/render.ts`, mobile joystick: `src/joystick.ts`. Auth and stats: `src/lib/account.ts`.
 
 ## Supabase
 
-1. Izveido projektu un ieslēdz **Google** provider (`Authentication → Providers`).
-2. Redirect URL: `http://localhost:3177` un produkcijas origin.
-3. `.env.local` (un Vercel) aizpildi: `SUPABASE_URL`, `SUPABASE_ANON_KEY`. Migrācijām lokāli `SUPABASE_DB_PASSWORD` (Database password, ne anon key). Nepievieno Vercel DB paroli vai service role.
-4. `npm run db:migrate` — es to palaižu pats pēc jauniem `supabase/migrations/*.sql`.
+1. Create a project and enable the **Google** provider (`Authentication → Providers`).
+2. Redirect URL: `http://localhost:3177` and the production origin.
+3. Fill `.env.local` (and Vercel) with `SUPABASE_URL`, `SUPABASE_ANON_KEY`. For local migrations, `SUPABASE_DB_PASSWORD` (Database password, not the anon key). Do not put the DB password or service role on Vercel.
+4. `npm run db:migrate` — the agent runs this after new `supabase/migrations/*.sql` files.
 
-Tabulas `player_profiles` un `player_play_days` ir ar RLS deny; klients iet caur `ensure_player`, `set_player_name`, `start_player_run`, `finish_player_run`, `player_leaderboard`.
+Tables `player_profiles` and `player_play_days` use RLS deny; the client goes through `ensure_player`, `set_player_name`, `start_player_run`, `finish_player_run`, `player_leaderboard`.
 
-## Versijas un commit
+## Versioning and commits
 
-Shippable izmaiņām vispirms bump `package.json`, `README.md` un `CHANGELOG.md`. Commit ziņojums:
+For shippable changes, bump `package.json`, `README.md`, and `CHANGELOG.md` first. Commit message:
 
 ```
-Īss apraksts. vX.Y.Z
+Short description. vX.Y.Z
 ```
 
-Pirms commit: `npm run typecheck` un `npm run build`.
+Before commit: `npm run typecheck` and `npm run build`.
 
-Git author e-pastam jābūt derīgam (ne `datorvārds.local`), citādi Vercel bloķē deploy. Iestati to lokāli (ne čatā ar `git config` agentam):
+The git author email must be valid (not `hostname.local`), or Vercel blocks the deploy. Set it locally (not via `git config` in chat):
 
 ```
 git config --global user.email "nezinams.imeginajums@gmail.com"
 git config --global user.name "Sandris Ozols-Ozoliņš"
 ```
 
-## GitHub drošības pārbaudes
+## GitHub security checks
 
-Katram push: **Secret scan** (Gitleaks), **Security audit** (`npm run audit:check`), **Security smoke** (typecheck, build, RLS, nav service role klientā, `vercel.json` galvenes).
+On every push: **Secret scan** (Gitleaks), **Security audit** (`npm run audit:check`), **Security smoke** (typecheck, build, RLS, no service role in the client, `vercel.json` headers).

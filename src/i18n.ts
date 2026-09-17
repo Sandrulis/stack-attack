@@ -1,6 +1,6 @@
 export const STR = {
-  title: "Stack Attack",
-  subtitle: "Block warehouse",
+  title: "BoxDrop",
+  subtitle: "Push. Stack. Survive.",
   start: "Start game",
   how: "Each dropped or smashed crate is +1. Push crates and fill the bottom row.",
   score: "Score",

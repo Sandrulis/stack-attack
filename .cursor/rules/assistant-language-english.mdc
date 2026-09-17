@@ -1,0 +1,15 @@
+---
+description: English-only copy in the product, docs, and chat
+alwaysApply: true
+---
+
+# Language
+
+- Reply to the user in English by default.
+- If the user clearly asks for another language, reply in that language.
+- Keep code, commands, file paths, error text, and quotes in their original language when that is more precise.
+
+## Copy
+
+- UI, README, CHANGELOG, developer notes, and human-facing comments are **English only**. Never hardcode Latvian (or other) copy.
+- Do not mention Siemens or Stack Attack in the product, docs, UI, or comments.
