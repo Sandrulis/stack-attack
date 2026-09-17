@@ -3,19 +3,60 @@ type Voice = {
   master: GainNode;
 };
 
+const MUTE_KEY = "stack-attack-muted";
+const MASTER_GAIN = 0.18;
+
 let voice: Voice | null = null;
+let muted = readMuted();
+
+function readMuted(): boolean {
+  try {
+    return window.localStorage.getItem(MUTE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function persistMuted() {
+  try {
+    window.localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+function applyMasterGain() {
+  if (!voice) return;
+  voice.master.gain.value = muted ? 0 : MASTER_GAIN;
+}
 
 function getVoice(): Voice | null {
   if (typeof window === "undefined") return null;
   if (!voice) {
     const ctx = new AudioContext();
     const master = ctx.createGain();
-    master.gain.value = 0.18;
+    master.gain.value = muted ? 0 : MASTER_GAIN;
     master.connect(ctx.destination);
     voice = { ctx, master };
   }
   if (voice.ctx.state === "suspended") void voice.ctx.resume();
   return voice;
+}
+
+export function isMuted(): boolean {
+  return muted;
+}
+
+export function setMuted(value: boolean) {
+  muted = value;
+  persistMuted();
+  applyMasterGain();
+}
+
+export function toggleMute(): boolean {
+  setMuted(!muted);
+  if (!muted) unlockAudio();
+  return muted;
 }
 
 export function unlockAudio() {
@@ -29,6 +70,7 @@ function beep(
   gain = 1,
   slideTo?: number,
 ) {
+  if (muted) return;
   const v = getVoice();
   if (!v) return;
   const t0 = v.ctx.currentTime;

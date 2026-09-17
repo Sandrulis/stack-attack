@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.14
+
+- Mobilajā HUD: Scores zem Pause, skaņas poga zem telferu skaita
+
 ## v0.1.13
 
 - Vercel un lokāli env: `SUPABASE_URL` un `SUPABASE_ANON_KEY` bez `VITE_` prefiksa

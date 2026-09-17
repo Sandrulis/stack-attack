@@ -1,6 +1,6 @@
 # Stack Attack
 
-**Current version:** `0.1.13`
+**Current version:** `0.1.14`
 
 **Stack Attack** stila 2D spēle pārlūkā. Cilvēciņš stumj kastes, telferis tās met no augšas visā laukuma platumā, un pilna apakšējā rinda pazūd ar +1 punktu.
 
@@ -26,7 +26,8 @@ Pirms spēles jābūt Google kontam. Pēc ielogošanās jāapstiprina lietotājv
 | `←`/`→` + `Space` | Lēciens uz priekšu, uz kastes vai no tās (datorā) |
 | Džoistiks | Iet un stumt pa kreisi/pa labi (telefonā) |
 | Poga **Jump** | Lēciens uz vietas; kopā ar džoistiku - uz priekšu (telefonā) |
-| `Esc` | Pauze |
+| `Esc` / **Pause** | Pauze |
+| Skaņas poga | Ieslēdz / izslēdz skaņu (zem telferu punktiem) |
 
 ## Spēles noteikumi
 

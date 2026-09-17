@@ -27,7 +27,23 @@
           </div>
         </div>
         <div class="hud-right">
-          <div class="stat cranes" id="cranes" aria-label="Cranes"></div>
+          <div class="hud-cranes">
+            <div class="stat cranes" id="cranes" aria-label="Cranes"></div>
+            <button type="button" id="mute-btn" class="ghost mute-btn" aria-pressed="false" aria-label="Mute sound">
+              <svg class="mute-icon mute-icon-on" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M3 9h4l5-4v14l-5-4H3V9zm11.2-1.8v2.2a3.6 3.6 0 0 1 0 5.2v2.2a5.8 5.8 0 0 0 0-9.6zm3.3-2.4v2.1a7.8 7.8 0 0 1 0 12.2v2.1a9.9 9.9 0 0 0 0-16.4z"
+                />
+              </svg>
+              <svg class="mute-icon mute-icon-off" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M3 9h4l5-4v14l-5-4H3V9zm16.2-3.1 1.5 1.5-3.2 3.2 3.2 3.2-1.5 1.5-3.2-3.2-3.2 3.2-1.5-1.5 3.2-3.2-3.2-3.2 1.5-1.5 3.2 3.2 3.2-3.2z"
+                />
+              </svg>
+            </button>
+          </div>
           <div class="top-actions">
             <button type="button" id="board-btn" class="ghost">Scores</button>
             <button type="button" id="pause-btn" class="ghost">Pause</button>

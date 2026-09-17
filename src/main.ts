@@ -1,5 +1,5 @@
 import "./style.css";
-import { unlockAudio } from "./audio";
+import { isMuted, toggleMute, unlockAudio } from "./audio";
 import {
   CONFIRM_KEYS,
   Input,
@@ -46,6 +46,7 @@ const canvas = document.querySelector<HTMLCanvasElement>("#game")!;
 const overlay = document.querySelector<HTMLElement>("#overlay")!;
 const pauseBtn = document.querySelector<HTMLButtonElement>("#pause-btn")!;
 const boardBtn = document.querySelector<HTMLButtonElement>("#board-btn")!;
+const muteBtn = document.querySelector<HTMLButtonElement>("#mute-btn")!;
 const scoreEl = document.querySelector("#score")!;
 const bestEl = document.querySelector("#best")!;
 const cranesEl = document.querySelector("#cranes")!;
@@ -265,9 +266,17 @@ function syncCopy() {
   document.querySelector("#legend-pause")!.textContent = t.legendPause;
   pauseBtn.textContent = t.pause;
   boardBtn.textContent = t.boardOpen;
+  syncMuteButton();
   jumpBtn.querySelector(".jump-btn-label")!.textContent = t.jumpBtn;
   const rotateText = document.querySelector("#rotate-text");
   if (rotateText) rotateText.textContent = t.rotate;
+}
+
+function syncMuteButton() {
+  const muted = isMuted();
+  muteBtn.classList.toggle("is-muted", muted);
+  muteBtn.setAttribute("aria-pressed", muted ? "true" : "false");
+  muteBtn.setAttribute("aria-label", muted ? STR.unmute : STR.mute);
 }
 
 function syncHud() {
@@ -566,6 +575,11 @@ pauseBtn.addEventListener("click", () => {
     return;
   }
   if (state.phase === "playing" || state.phase === "paused") togglePause(state);
+});
+
+muteBtn.addEventListener("click", () => {
+  toggleMute();
+  syncMuteButton();
 });
 
 function handleInput() {

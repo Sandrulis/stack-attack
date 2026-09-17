@@ -16,6 +16,8 @@ export const STR = {
   move: "Walk and push",
   jump: "Jump onto a crate, hop off it, or leap over one crate",
   pause: "Pause",
+  mute: "Mute sound",
+  unmute: "Unmute sound",
   hint: "Press Enter or Start",
   legendMove: "← → walk and push",
   legendJump: "←/→ + Space jump / push",
