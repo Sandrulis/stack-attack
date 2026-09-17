@@ -1,0 +1,15 @@
+---
+description: After SQL migration changes, run db:migrate; on failure fix SQL and retry until success
+globs: supabase/migrations/**/*.sql
+alwaysApply: false
+---
+
+# DB migrations — run, fix, retry
+
+When you **create or materially edit** a file in `supabase/migrations/`:
+
+1. Use the next sequential prefix. Prefer idempotent SQL.
+2. Run `npm run db:migrate` from project root. Do not ask the user to paste SQL.
+3. On failure, fix the pending SQL and retry until success or a real env/network blocker (missing `SUPABASE_DB_PASSWORD` / `DATABASE_URL` in `.env.local`).
+
+Report applied filenames (or `No pending migrations.`) to the user.

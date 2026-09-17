@@ -91,3 +91,10 @@ export function craneThreshold(score: number): number {
   if (score >= 18) return 2;
   return 1;
 }
+
+export function windowPane(): { y: number; h: number } {
+  return {
+    y: ORIGIN_Y - CELL + 10,
+    h: (ROWS * CELL + CELL) * 0.52,
+  };
+}

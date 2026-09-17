@@ -1,6 +1,6 @@
 {
   "name": "stack-attack",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "type": "module",
   "description": "Siemens Stack Attack stila noliktavas spēle pārlūkā",
@@ -8,13 +8,18 @@
     "dev": "vite --port 3177 --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 3177 --host",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "node scripts/apply-migrations.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "pg": "^8.23.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.5"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0"
   }
 }

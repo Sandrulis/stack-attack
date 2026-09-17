@@ -20,6 +20,7 @@ import {
   ROWS,
   WALK_MS,
   craneThreshold,
+  windowPane,
 } from "./constants";
 
 export type Phase = "title" | "playing" | "paused" | "exploding" | "dead";
@@ -95,6 +96,18 @@ export type RainDrop = {
   len: number;
 };
 
+export type FireworkSpark = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  max: number;
+  color: string;
+  size: number;
+  kind: "rocket" | "spark";
+};
+
 export type GameState = {
   phase: Phase;
   player: Player;
@@ -109,9 +122,13 @@ export type GameState = {
   stormWait: number;
   stormHold: number;
   stormFlash: number;
+  fireworks: FireworkSpark[];
+  fireworkWait: number;
+  celebration: number;
   score: number;
   best: number;
   recordAtStart: number;
+  globalBestAtStart: number;
   sunset: number;
   shake: number;
   flash: number;
@@ -233,7 +250,7 @@ function spawnRainDrop(anywhere = false): RainDrop {
 }
 
 function updateWeather(state: GameState, dt: number) {
-  if (state.sunset > 0.04) {
+  if (state.celebration > 0.04 || state.sunset > 0.04) {
     state.stormHold = 0;
     state.storm = Math.max(0, state.storm - dt / 700);
     state.stormFlash = Math.max(0, state.stormFlash - dt * 0.01);
@@ -295,9 +312,13 @@ export function createGame(): GameState {
     stormWait: nextStormWait(),
     stormHold: 0,
     stormFlash: 0,
+    fireworks: [],
+    fireworkWait: 120,
+    celebration: 0,
     score: 0,
     best: loadBest(),
     recordAtStart: loadBest(),
+    globalBestAtStart: Number.POSITIVE_INFINITY,
     sunset: 0,
     shake: 0,
     flash: 0,
@@ -308,7 +329,14 @@ export function createGame(): GameState {
   };
 }
 
-export function startRun(state: GameState) {
+export function hydrateBest(state: GameState, best: number) {
+  const n = Math.max(0, best);
+  state.best = n;
+  if (state.phase === "title") state.recordAtStart = n;
+  saveBest(n);
+}
+
+export function startRun(state: GameState, opts?: { globalBest?: number }) {
   state.phase = "playing";
   state.player = emptyPlayer();
   state.crates = [];
@@ -317,7 +345,11 @@ export function startRun(state: GameState) {
   state.popups = [];
   state.score = 0;
   state.recordAtStart = state.best;
+  state.globalBestAtStart = opts?.globalBest ?? Number.POSITIVE_INFINITY;
   state.sunset = 0;
+  state.celebration = 0;
+  state.fireworks = [];
+  state.fireworkWait = 80;
   state.rain = [];
   state.storm = 0;
   state.stormWait = nextStormWait();
@@ -933,6 +965,67 @@ function updateParticles(state: GameState, dt: number) {
   state.popups = state.popups.filter((p) => p.life > 0);
 }
 
+const FIREWORK_COLORS = ["#ff4d6d", "#ffd166", "#06d6a0", "#4cc9f0", "#f72585", "#ffffff", "#ffe566"];
+
+function spawnFireworkRocket(state: GameState) {
+  const pane = windowPane();
+  state.fireworks.push({
+    x: 36 + Math.random() * (CANVAS_W - 72),
+    y: pane.y + pane.h - 8,
+    vx: (Math.random() - 0.5) * 0.05,
+    vy: -0.46 - Math.random() * 0.16,
+    life: 560,
+    max: 560,
+    color: "#fff6a8",
+    size: 4,
+    kind: "rocket",
+  });
+}
+
+function explodeFirework(state: GameState, rocket: FireworkSpark) {
+  const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)] ?? "#ffe566";
+  const count = 16 + Math.floor(Math.random() * 12);
+  for (let i = 0; i < count; i += 1) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.25;
+    const speed = 0.11 + Math.random() * 0.2;
+    state.fireworks.push({
+      x: rocket.x,
+      y: rocket.y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed * 0.72,
+      life: 640 + Math.random() * 420,
+      max: 980,
+      color,
+      size: 3 + Math.random() * 3,
+      kind: "spark",
+    });
+  }
+}
+
+function updateFireworks(state: GameState, dt: number) {
+  if (state.celebration > 0.18 && (state.phase === "playing" || state.phase === "dead")) {
+    state.fireworkWait -= dt;
+    if (state.fireworkWait <= 0) {
+      spawnFireworkRocket(state);
+      if (Math.random() < 0.7) spawnFireworkRocket(state);
+      if (Math.random() < 0.35) spawnFireworkRocket(state);
+      state.fireworkWait = 70 + Math.random() * 140;
+    }
+  }
+  const living: FireworkSpark[] = [];
+  const rockets: FireworkSpark[] = [];
+  for (const spark of state.fireworks) {
+    spark.x += spark.vx * dt;
+    spark.y += spark.vy * dt;
+    spark.vy += (spark.kind === "rocket" ? 0.00062 : 0.0003) * dt;
+    spark.life -= dt;
+    if (spark.kind === "rocket" && (spark.life <= 0 || spark.vy >= -0.04)) rockets.push(spark);
+    else if (spark.life > 0) living.push(spark);
+  }
+  state.fireworks = living;
+  for (const rocket of rockets) explodeFirework(state, rocket);
+}
+
 export function visualPos(
   actor: {
     col: number;
@@ -976,13 +1069,19 @@ export function updateGame(state: GameState, dt: number) {
   state.time += dt;
   state.shake = Math.max(0, state.shake - dt * 0.028);
   state.flash = Math.max(0, state.flash - dt * 0.004);
-  if (state.phase !== "title" && state.phase !== "paused" && state.score > state.recordAtStart) {
-    state.sunset = Math.min(1, state.sunset + dt / 1100);
+  if (state.phase !== "title" && state.phase !== "paused") {
+    if (state.score > state.globalBestAtStart) {
+      state.celebration = Math.min(1, state.celebration + dt / 750);
+      state.sunset = Math.max(0, state.sunset - dt / 500);
+    } else if (state.score > state.recordAtStart) {
+      state.sunset = Math.min(1, state.sunset + dt / 1100);
+    }
   }
   updateParticles(state, dt);
   if (state.phase !== "paused") {
     updateSkyClouds(state, dt);
     updateWeather(state, dt);
+    updateFireworks(state, dt);
   }
 
   if (state.phase === "title" || state.phase === "paused") return;

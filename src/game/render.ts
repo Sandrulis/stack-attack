@@ -11,7 +11,7 @@ import {
   ROWS,
   gridToScreen,
 } from "./constants";
-import type { GameState, Player } from "./engine";
+import type { FireworkSpark, GameState, Player } from "./engine";
 import { crateDrawInFront, visualPos } from "./engine";
 
 function hash(n: number): number {
@@ -156,7 +156,8 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
   const winH = (ROWS * CELL + CELL) * 0.52;
   const winY = ORIGIN_Y - CELL + 10;
   const t = Math.max(0, Math.min(1, state.sunset));
-  const storm = Math.max(0, Math.min(1, state.storm)) * (1 - t);
+  const night = Math.max(0, Math.min(1, state.celebration));
+  const storm = Math.max(0, Math.min(1, state.storm)) * (1 - t) * (1 - night);
   for (let i = 0; i < count; i += 1) {
     const x = pad + i * (winW + gaps);
     box(ctx, x - 6, winY - 6, winW + 12, winH + 12, PALETTE.windowFrame, PALETTE.iron, PALETTE.grout);
@@ -171,11 +172,11 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
     ctx.fillRect(x, winY, winW, winH);
     if (storm > 0) {
       ctx.globalAlpha = storm;
-      const dusk = ctx.createLinearGradient(x, winY, x, winY + winH);
-      dusk.addColorStop(0, "#151b28");
-      dusk.addColorStop(0.45, "#2a3346");
-      dusk.addColorStop(1, "#3d4558");
-      ctx.fillStyle = dusk;
+      const gloom = ctx.createLinearGradient(x, winY, x, winY + winH);
+      gloom.addColorStop(0, "#151b28");
+      gloom.addColorStop(0.45, "#2a3346");
+      gloom.addColorStop(1, "#3d4558");
+      ctx.fillStyle = gloom;
       ctx.fillRect(x, winY, winW, winH);
       if (state.stormFlash > 0) {
         ctx.fillStyle = `rgba(235, 245, 255, ${0.42 * state.stormFlash})`;
@@ -183,8 +184,8 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
       }
       ctx.globalAlpha = 1;
     }
-    if (t > 0) {
-      ctx.globalAlpha = t;
+    if (t > 0 && night < 0.55) {
+      ctx.globalAlpha = t * (1 - night);
       const dusk = ctx.createLinearGradient(x, winY, x, winY + winH);
       dusk.addColorStop(0, "#2a1038");
       dusk.addColorStop(0.38, "#a32248");
@@ -195,11 +196,28 @@ function drawWindows(ctx: CanvasRenderingContext2D, state: GameState) {
       drawSunsetSun(ctx, winY, winH);
       ctx.globalAlpha = 1;
     }
-    drawWindowClouds(ctx, state, winY, storm);
+    if (night > 0) {
+      ctx.globalAlpha = night;
+      const dark = ctx.createLinearGradient(x, winY, x, winY + winH);
+      dark.addColorStop(0, "#05060c");
+      dark.addColorStop(0.55, "#0c1020");
+      dark.addColorStop(1, "#161022");
+      ctx.fillStyle = dark;
+      ctx.fillRect(x, winY, winW, winH);
+      ctx.globalAlpha = 1;
+    }
+    drawWindowClouds(ctx, state, winY, Math.max(storm, night * 0.85));
     drawRain(ctx, state, storm);
+    drawFireworks(ctx, state.fireworks, night);
     ctx.restore();
     ctx.fillStyle =
-      t > 0 ? `rgba(255, 140, 80, ${0.12 * t})` : storm > 0.12 ? `rgba(30, 40, 58, ${0.2 * storm})` : PALETTE.glass;
+      night > 0.2
+        ? `rgba(12, 16, 32, ${0.18 * night})`
+        : t > 0
+          ? `rgba(255, 140, 80, ${0.12 * t})`
+          : storm > 0.12
+            ? `rgba(30, 40, 58, ${0.2 * storm})`
+            : PALETTE.glass;
     ctx.fillRect(x, winY, winW, winH);
     ctx.fillStyle = PALETTE.glassEdge;
     ctx.fillRect(x, winY, winW, 8);
@@ -248,6 +266,20 @@ function drawRain(ctx: CanvasRenderingContext2D, state: GameState, storm: number
     ctx.lineTo(drop.x - 3, drop.y + drop.len);
   }
   ctx.stroke();
+}
+
+function drawFireworks(ctx: CanvasRenderingContext2D, sparks: FireworkSpark[], night: number) {
+  if (night < 0.05 || sparks.length === 0) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  for (const spark of sparks) {
+    const alpha = Math.max(0.15, spark.life / spark.max) * night;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = spark.color;
+    const s = spark.kind === "rocket" ? 5 : spark.size;
+    ctx.fillRect(spark.x, spark.y, s, s);
+  }
+  ctx.restore();
 }
 
 function drawSunsetSun(ctx: CanvasRenderingContext2D, winY: number, winH: number) {

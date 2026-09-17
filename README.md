@@ -1,6 +1,6 @@
 # Stack Attack
 
-**Current version:** `0.1.9`
+**Current version:** `0.1.10`
 
 **Stack Attack** stila 2D spēle pārlūkā. Cilvēciņš stumj kastes, telferis tās met no augšas visā laukuma platumā, un pilna apakšējā rinda pazūd ar +1 punktu.
 
@@ -9,11 +9,14 @@ Iedvesma: [Stack Project uz itch.io](https://masterpiet98.itch.io/stack-project)
 ## Palaist
 
 ```bash
+cp env.example .env.local
 npm install
 npm run dev
 ```
 
-Atver [http://localhost:3177](http://localhost:3177).
+Ievadi Supabase URL un anon key failā `.env.local`. Atver [http://localhost:3177](http://localhost:3177).
+
+Pirms spēles jābūt Google kontam. Pēc ielogošanās jāapstiprina lietotājvārds (noklusējumā e-pasta daļa pirms `@`, to var nomainīt). Saglabājas šodienas spēļu skaits, kopējais skaits un rekords. **Scores** atver top 20: 1. zelts, 2. sudrabs, 3. bronza.
 
 ## Vadība
 
@@ -34,11 +37,13 @@ Atver [http://localhost:3177](http://localhost:3177).
 - Kad apakšējā rinda ir pilna, tā pazūd uzreiz, spēle neapstājas, kastes virs tās krīt uz leju, un tiek pieskaitīts **1 punkts**.
 - Ar punktiem parādās līdz **4 telferiem**, un nomešana kļūst ātrāka.
 - Aiz logiem ik pa laikam peld balti, gubaini mākoņi dažādos izmēros. Gariem starplaikiem var uznākt negaiss ar tumsu un lietu.
-- Ja šajā spēlē pārspēj rekordu, aiz logiem paliek sarkans saulriets (saule pa pusei pie apakšas) līdz spēles beigām.
+- Ja šajā spēlē pārspēj savu rekordu, aiz logiem paliek sarkans saulriets (saule pa pusei pie apakšas) līdz spēles beigām.
+- Ja pārspēj visaugstāko rekordu visiem spēlētājiem, aiz logiem paliek nakts un visu laiku šauj salūts.
 
 ## Komandas
 
 ```bash
 npm run typecheck
 npm run build
+npm run db:migrate
 ```

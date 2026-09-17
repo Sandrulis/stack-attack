@@ -9,6 +9,7 @@ export class Input {
   }
 
   private readonly onKeyDown = (event: KeyboardEvent) => {
+    if (isTextField(event.target)) return;
     const key = normalizeKey(event.key);
     if (shouldPrevent(key)) event.preventDefault();
     if (!this.down.has(key)) this.pressed.add(key);
@@ -16,6 +17,7 @@ export class Input {
   };
 
   private readonly onKeyUp = (event: KeyboardEvent) => {
+    if (isTextField(event.target)) return;
     this.down.delete(normalizeKey(event.key));
   };
 
@@ -59,6 +61,10 @@ export class Input {
 function normalizeKey(key: string): string {
   if (key === " ") return "space";
   return key.toLowerCase();
+}
+
+function isTextField(target: EventTarget | null): boolean {
+  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
 }
 
 function shouldPrevent(key: string): boolean {

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.10
+
+- Google ielogošanās, lietotājvārds un saglabāti rekordi; Scores logs ar top 20 (zelts, sudrabs, bronza)
+- Visu laiku rekords paliek naktī ar salūtu logos; `npm run db:migrate` Supabase SQL
+
 ## v0.1.9
 
 - Spēles lauks 6×10, septīto rindu ved tikai telferis; bez vietas telferis riņķo, līdz nomet
