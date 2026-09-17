@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.19
+
+- On phones, cranes sit under Score and Best, with Settings under the crane block
+
 ## v0.1.18
 
 - Game title is BoxDrop; slogan is Push. Stack. Survive.

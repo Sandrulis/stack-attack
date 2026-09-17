@@ -660,9 +660,16 @@ button:disabled {
     right: 0;
     z-index: 8;
     width: 100%;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: max-content 1fr max-content;
+    grid-template-areas:
+      "scores . actions"
+      "cranes . actions"
+      "gear . mute";
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: start;
+    column-gap: 12px;
+    row-gap: 8px;
     padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 10px
       calc(12px + env(safe-area-inset-left));
     background: linear-gradient(to bottom, rgba(9, 13, 22, 0.78), transparent);
@@ -679,28 +686,38 @@ button:disabled {
   }
 
   .hud-left {
+    grid-area: scores;
     justify-content: flex-start;
   }
 
-  .hud-right {
-    flex-direction: column-reverse;
-    align-items: flex-end;
-    justify-content: flex-start;
-    gap: 8px;
+  .hud-right,
+  .hud-cranes {
+    display: contents;
+  }
+
+  .cranes {
+    grid-area: cranes;
+    justify-self: stretch;
+    align-self: start;
+    justify-content: center;
+    padding: 6px 8px;
+  }
+
+  #settings-btn {
+    grid-area: gear;
+    justify-self: stretch;
   }
 
   .top-actions {
+    grid-area: actions;
     flex-direction: column-reverse;
     align-items: stretch;
-    align-self: stretch;
     gap: 8px;
   }
 
-  .hud-cranes {
-    flex-direction: column;
-    align-items: stretch;
-    align-self: stretch;
-    gap: 8px;
+  #mute-btn {
+    grid-area: mute;
+    justify-self: stretch;
   }
 
   .top-actions button,
@@ -718,10 +735,6 @@ button:disabled {
 
   .hud-left .stat {
     height: auto;
-  }
-
-  .cranes {
-    padding: 6px 8px;
   }
 
   .crane-dot {

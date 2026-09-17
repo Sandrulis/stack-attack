@@ -1,6 +1,6 @@
 # BoxDrop
 
-**Current version:** `0.1.18`
+**Current version:** `0.1.19`
 
 **BoxDrop** is a 2D warehouse game in the browser. Slogan: *Push. Stack. Survive.* Push crates, dodge drops from overhead cranes, and clear a full bottom row for +1.
 
@@ -14,7 +14,7 @@ npm run dev
 
 Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `.env.local` (same names on Vercel Environment Variables). Open [http://localhost:3177](http://localhost:3177).
 
-Sign in with Google before you play. After login, username and play counts are in **Settings** (gear under the mute button). **Scores** opens the top 20 (All or your country): 1st gold, 2nd silver, 3rd bronze.
+Sign in with Google before you play. After login, username and play counts are in **Settings**. On phones, cranes and Settings sit under Score and Best; **Scores** opens the top 20 (All or your country): 1st gold, 2nd silver, 3rd bronze.
 
 ## Controls
 
@@ -25,7 +25,7 @@ Sign in with Google before you play. After login, username and play counts are i
 | Joystick | Walk and push left or right (phone) |
 | **Jump** | Hop in place; with the joystick, jump forward (phone) |
 | `Esc` / **Pause** | Pause |
-| Mute | Toggle sound (under the crane count) |
+| Mute | Toggle sound |
 | Gear | Settings: today's/total plays and username |
 
 ## Rules
