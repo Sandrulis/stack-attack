@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.17
+
+- Vienā kolonnā vienlaikus krīt tikai viena kaste; telferis un gravitācija gaida, līdz tā nosēžas
+
 ## v0.1.16
 
 - Settings zem skaņas pogas: statistika un lietotājvārds, sākuma ekrāns paliek tīrs

@@ -506,7 +506,7 @@ function addScore(state: GameState, col: number, row: number, amount = 1) {
 
 function spawnCrate(state: GameState, col: number) {
   const top = ROWS - 1;
-  if (blocked(state, col, top)) return false;
+  if (dropBlocked(state, col) || blocked(state, col, top)) return false;
   const crate: Crate = {
     id: state.nextId++,
     col,
@@ -523,6 +523,14 @@ function spawnCrate(state: GameState, col: number) {
   return true;
 }
 
+function crateFallsInCol(crate: Crate, col: number): boolean {
+  return crateIsFalling(crate) && (crate.col === col || crate.fromCol === col);
+}
+
+function columnHasFallingCrate(state: GameState, col: number, ignoreId = -1): boolean {
+  return state.crates.some((crate) => crate.id !== ignoreId && crateFallsInCol(crate, col));
+}
+
 function topBusy(state: GameState, col: number): boolean {
   return state.crates.some(
     (crate) =>
@@ -531,11 +539,15 @@ function topBusy(state: GameState, col: number): boolean {
   );
 }
 
+function dropBlocked(state: GameState, col: number): boolean {
+  return topBusy(state, col) || columnHasFallingCrate(state, col);
+}
+
 function randomFreeCol(state: GameState, avoid: number[] = []): number | null {
   const preferred: number[] = [];
   const fallback: number[] = [];
   for (let col = 0; col < COLS; col += 1) {
-    if (topBusy(state, col)) continue;
+    if (dropBlocked(state, col)) continue;
     if (avoid.includes(col)) fallback.push(col);
     else preferred.push(col);
   }
@@ -582,18 +594,21 @@ function updateCranes(state: GameState, dt: number) {
       crane.dropping -= dt;
       if (crane.dropping <= 0 && crane.carrying) {
         const col = Math.max(0, Math.min(COLS - 1, Math.round(crane.x)));
-        if (!topBusy(state, col)) spawnCrate(state, col);
-        crane.carrying = false;
+        if (!dropBlocked(state, col) && spawnCrate(state, col)) crane.carrying = false;
+        else {
+          crane.dropping = 0;
+          retargetDrop(state, crane);
+        }
       }
     } else if (crane.carrying) {
       const atDrop =
         crane.dir < 0
           ? crane.x <= crane.dropCol + 0.18 && crane.x >= crane.dropCol - 0.4
           : crane.x >= crane.dropCol - 0.18 && crane.x <= crane.dropCol + 0.4;
-      if (atDrop && !topBusy(state, crane.dropCol)) {
+      if (atDrop && !dropBlocked(state, crane.dropCol)) {
         crane.dropping = CRANE_DROP_MS;
       } else {
-        if (topBusy(state, crane.dropCol)) retargetDrop(state, crane);
+        if (dropBlocked(state, crane.dropCol)) retargetDrop(state, crane);
         const passed = crane.dir < 0 ? crane.x < crane.dropCol - 0.45 : crane.x > crane.dropCol + 0.45;
         if (passed) {
           retargetDrop(state, crane);
@@ -613,9 +628,15 @@ function updateCranes(state: GameState, dt: number) {
 
 function applyCrateGravity(state: GameState) {
   const ordered = [...state.crates].sort((a, b) => a.row - b.row);
+  const fallingCols = new Set<number>();
+  for (const crate of ordered) {
+    if (crateIsFalling(crate)) fallingCols.add(crate.col);
+    if (crateIsFalling(crate) && crate.fromCol !== crate.col) fallingCols.add(crate.fromCol);
+  }
   for (const crate of ordered) {
     if (crate.moving) continue;
     if (supported(state, crate.col, crate.row, crate.id)) continue;
+    if (fallingCols.has(crate.col)) continue;
     const dest = crate.row - 1;
     const ontoPlayer =
       state.player.pose !== "dead" &&
@@ -623,6 +644,7 @@ function applyCrateGravity(state: GameState) {
       state.player.col === crate.col &&
       state.player.row === dest;
     beginMove(crate, crate.col, dest, CRATE_FALL_MS, !ontoPlayer);
+    fallingCols.add(crate.col);
   }
 }
 
@@ -759,27 +781,7 @@ function burstRow(state: GameState) {
     }
   }
   state.crates = state.crates.filter((c) => c.row !== 0);
-  for (const crate of state.crates) {
-    const vis = crate.moving ? visualPos(crate) : { col: crate.col, row: crate.row };
-    crate.fromCol = vis.col;
-    crate.fromRow = vis.row;
-    crate.row = Math.max(0, crate.row - 1);
-    crate.animT = 0;
-    crate.animDur = FALL_MS + 40;
-    crate.moving = true;
-  }
   const p = state.player;
-  if (p.row > 0 && p.pose !== "dead") {
-    const vis = p.moving ? visualPos(p, p.pose === "jump") : { col: p.col, row: p.row };
-    p.fromCol = vis.col;
-    p.fromRow = vis.row;
-    p.row -= 1;
-    p.animT = 0;
-    p.animDur = FALL_MS + 40;
-    p.moving = true;
-    p.pose = "fall";
-    p.jumpT = 0;
-  }
   addScore(state, p.col, Math.max(1, p.row + 1));
   state.flash = 1;
   state.shake = 7;
@@ -801,6 +803,7 @@ function crateCanPush(state: GameState, crate: Crate, dir: Dir): boolean {
   if (!falling && crateAt(state, crate.col, crate.row + 1)) return false;
   const dest = crate.col + dir;
   if (dest < 0 || dest >= COLS) return false;
+  if (falling && columnHasFallingCrate(state, dest, crate.id)) return false;
   return !blocked(state, dest, crate.row, crate.id);
 }
 
@@ -1184,7 +1187,11 @@ export function updateGame(state: GameState, dt: number) {
     if (resolveCrateHit(state, crate) === "kill") return;
   }
 
-  if (bottomRowFull(state)) burstRow(state);
+  if (bottomRowFull(state)) {
+    burstRow(state);
+    applyCrateGravity(state);
+    playerGravity(state);
+  }
 }
 
 export function isGameOverVisible(state: GameState): boolean {
