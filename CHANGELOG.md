@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.20
+
+- Phone joystick is a 3-position switch (left / center / right), so a light press no longer walks
+
 ## v0.1.19
 
 - On phones, cranes sit under Score and Best, with Settings under the crane block

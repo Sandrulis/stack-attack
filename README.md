@@ -1,6 +1,6 @@
 # BoxDrop
 
-**Current version:** `0.1.19`
+**Current version:** `0.1.20`
 
 **BoxDrop** is a 2D warehouse game in the browser. Slogan: *Push. Stack. Survive.* Push crates, dodge drops from overhead cranes, and clear a full bottom row for +1.
 
@@ -22,7 +22,7 @@ Sign in with Google before you play. After login, username and play counts are i
 |---|---|
 | `←` `→` | Walk and push a crate (desktop) |
 | `←`/`→` + `Space` | Jump forward, onto a crate, or off it (desktop) |
-| Joystick | Walk and push left or right (phone) |
+| Joystick | 3-position: left, center, right (phone) |
 | **Jump** | Hop in place; with the joystick, jump forward (phone) |
 | `Esc` / **Pause** | Pause |
 | Mute | Toggle sound |

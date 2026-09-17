@@ -4,6 +4,27 @@ export type StickState = {
   jump: boolean;
 };
 
+type Lane = -1 | 0 | 1;
+
+const ENGAGE = 0.5;
+const RELEASE = 0.28;
+
+function snapLane(raw: number, current: Lane): Lane {
+  if (current === 0) {
+    if (raw <= -ENGAGE) return -1;
+    if (raw >= ENGAGE) return 1;
+    return 0;
+  }
+  if (current === -1) {
+    if (raw >= ENGAGE) return 1;
+    if (raw >= -RELEASE) return 0;
+    return -1;
+  }
+  if (raw <= -ENGAGE) return -1;
+  if (raw <= RELEASE) return 0;
+  return 1;
+}
+
 export function bindJoystick(
   root: HTMLElement,
   knob: HTMLElement,
@@ -12,20 +33,22 @@ export function bindJoystick(
   const state: StickState = { x: 0, y: 0, jump: false };
   let originX = 0;
   let active = false;
+  let lane: Lane = 0;
 
   const radius = () => Math.max(8, (root.clientWidth - knob.offsetWidth) / 2 - 3);
 
-  const setKnob = (x: number) => {
+  const setKnob = (x: Lane) => {
     knob.style.transform = `translate(${x * radius()}px, 0px)`;
-    root.classList.toggle("is-active", Math.abs(x) > 0.08);
+    root.classList.toggle("is-active", x !== 0);
   };
 
   const apply = (clientX: number) => {
     const r = radius();
-    const x = Math.max(-1, Math.min(1, (clientX - originX) / r));
-    state.x = x;
+    const raw = Math.max(-1, Math.min(1, (clientX - originX) / r));
+    lane = snapLane(raw, lane);
+    state.x = lane;
     state.y = 0;
-    setKnob(x);
+    setKnob(lane);
   };
 
   const start = (event: PointerEvent) => {
@@ -43,6 +66,7 @@ export function bindJoystick(
 
   const end = () => {
     active = false;
+    lane = 0;
     state.x = 0;
     state.y = 0;
     setKnob(0);

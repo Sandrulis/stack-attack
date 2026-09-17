@@ -792,8 +792,8 @@ function handleInput() {
 
   const now = performance.now();
   const wantJump = input.consumeAny(JUMP_KEYS) || stick.jump;
-  const left = input.holdAny(LEFT_KEYS) || stick.x < -0.28;
-  const right = input.holdAny(RIGHT_KEYS) || stick.x > 0.28;
+  const left = input.holdAny(LEFT_KEYS) || stick.x < 0;
+  const right = input.holdAny(RIGHT_KEYS) || stick.x > 0;
 
   if (wantJump) {
     pendingJump = left ? -1 : right ? 1 : 0;
