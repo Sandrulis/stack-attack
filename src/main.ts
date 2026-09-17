@@ -13,6 +13,7 @@ import { STR } from "./i18n";
 import { CANVAS_H, CANVAS_W, MAX_CRANES, MAX_LIVES } from "./game/constants";
 import {
   clearLives,
+  consumePendingLifeGains,
   createGame,
   hydrateBest,
   hydrateLeader,
@@ -34,6 +35,7 @@ import {
   currentUser,
   detectViewerCountry,
   finishPlayerRun,
+  gainPlayerLife,
   isSupabaseConfigured,
   isValidPlayerName,
   loadLeaderboard,
@@ -727,6 +729,20 @@ async function useHeart() {
   }
 }
 
+async function persistCaughtHearts(count: number) {
+  for (let i = 0; i < count; i += 1) {
+    try {
+      const next = await gainPlayerLife();
+      if (next) {
+        stats = next;
+        if (next.lives >= state.lives) applyAccountLives(next);
+      }
+    } catch {
+      /* keep the local extra heart */
+    }
+  }
+}
+
 overlay.addEventListener("input", (event) => {
   const field = event.target;
   if (!(field instanceof HTMLInputElement) || field.id !== "player-name") return;
@@ -915,6 +931,8 @@ function frame(now: number) {
   last = now;
   handleInput();
   updateGame(state, dt);
+  const gained = consumePendingLifeGains(state);
+  if (gained > 0) void persistCaughtHearts(gained);
   handleInput();
   drawGame(ctx, state);
   syncHud();

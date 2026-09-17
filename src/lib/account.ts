@@ -192,6 +192,14 @@ export async function spendPlayerLife(): Promise<PlayerStats | null> {
   return readStats(data);
 }
 
+export async function gainPlayerLife(): Promise<PlayerStats | null> {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("gain_player_life");
+  if (error) throw error;
+  return readStats(data);
+}
+
 export async function loadLeaderboard(country = ""): Promise<BoardRow[]> {
   const supabase = getSupabase();
   if (!supabase) return [];

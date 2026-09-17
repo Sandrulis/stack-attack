@@ -21,11 +21,16 @@ export const CRUSH_REST_ROW = 0.2;
 export const CRUSH_SETTLE_MS = 160;
 export const CRANE_DROP_MS = 420;
 export const CRATE_SCALE = 1;
+export const HEART_FALL_MS = 240;
+export const HEART_ABSORB_MS = 320;
+export const HEART_DROP_MIN = 75;
+export const HEART_DROP_RANGE = 75;
+export const HEART_DROP_STEP = 200;
 
 export const MAX_CRANES = 4;
 export const MAX_LIVES = 5;
 export const START_LIVES = 1;
-export const HEART_REGEN_MS = 24 * 60 * 60 * 1000;
+export const HEART_REGEN_MS = 12 * 60 * 60 * 1000;
 export const HIGH_SCORE_KEY = "stack-attack-highscore";
 export const LIVES_KEY = "boxdrop-lives-v2";
 

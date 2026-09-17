@@ -11,6 +11,11 @@ import {
   CRUSH_SETTLE_MS,
   DEATH_MS,
   FALL_MS,
+  HEART_ABSORB_MS,
+  HEART_DROP_MIN,
+  HEART_DROP_RANGE,
+  HEART_DROP_STEP,
+  HEART_FALL_MS,
   HEART_REGEN_MS,
   HIGH_SCORE_KEY,
   JUMP_MS,
@@ -50,6 +55,19 @@ export type Crane = {
   carrying: boolean;
   dropCol: number;
   dropping: number;
+  cargo: "crate" | "heart";
+};
+
+export type FallingHeart = {
+  id: number;
+  col: number;
+  row: number;
+  fromCol: number;
+  fromRow: number;
+  animT: number;
+  animDur: number;
+  moving: boolean;
+  absorbT: number;
 };
 
 export type Particle = {
@@ -59,6 +77,7 @@ export type Particle = {
   vy: number;
   life: number;
   max: number;
+  color?: string;
 };
 
 export type Popup = {
@@ -126,6 +145,7 @@ export type GameState = {
   player: Player;
   crates: Crate[];
   cranes: Crane[];
+  fallingHearts: FallingHeart[];
   particles: Particle[];
   popups: Popup[];
   skyClouds: SkyCloud[];
@@ -146,6 +166,10 @@ export type GameState = {
   livesReady: boolean;
   lives: number;
   nextLifeAt: number;
+  craneTrip: number;
+  nextHeartTrip: number;
+  heartDropWindow: number;
+  pendingLifeGains: number;
   best: number;
   recordAtStart: number;
   globalBestAtStart: number;
@@ -194,6 +218,7 @@ export function applyLifeRegen(state: GameState, now = Date.now()) {
     state.nextLifeAt = 0;
   } else {
     if (!state.nextLifeAt) state.nextLifeAt = now + HEART_REGEN_MS;
+    if (state.nextLifeAt > now + HEART_REGEN_MS) state.nextLifeAt = now + HEART_REGEN_MS;
     while (state.lives < MAX_LIVES && state.nextLifeAt > 0 && now >= state.nextLifeAt) {
       state.lives += 1;
       if (state.lives >= MAX_LIVES) state.nextLifeAt = 0;
@@ -224,6 +249,23 @@ export function spendLocalLife(state: GameState): boolean {
   if (!state.nextLifeAt) state.nextLifeAt = Date.now() + HEART_REGEN_MS;
   saveLives(state);
   return true;
+}
+
+export function gainLocalLife(state: GameState): boolean {
+  if (!state.livesReady) return false;
+  applyLifeRegen(state);
+  if (state.lives >= MAX_LIVES) return false;
+  state.lives += 1;
+  if (state.lives >= MAX_LIVES) state.nextLifeAt = 0;
+  saveLives(state);
+  state.pendingLifeGains += 1;
+  return true;
+}
+
+export function consumePendingLifeGains(state: GameState): number {
+  const n = state.pendingLifeGains;
+  state.pendingLifeGains = 0;
+  return n;
 }
 
 function emptyPlayer(): Player {
@@ -257,20 +299,41 @@ function randomDir(): Dir {
   return Math.random() < 0.5 ? -1 : 1;
 }
 
-function makeCrane(index: number, avoidCol?: number): Crane {
+function scheduleHeartDrop(state: GameState) {
+  const lo = HEART_DROP_MIN + HEART_DROP_STEP * state.heartDropWindow;
+  const hi = lo + HEART_DROP_RANGE;
+  state.nextHeartTrip = lo + Math.floor(Math.random() * (hi - lo + 1));
+  state.heartDropWindow += 1;
+}
+
+function armCraneCargo(state: GameState, crane: Crane) {
+  state.craneTrip += 1;
+  if (state.craneTrip >= state.nextHeartTrip) {
+    crane.cargo = "heart";
+    crane.dropCol = Math.floor(Math.random() * COLS);
+    scheduleHeartDrop(state);
+  } else {
+    crane.cargo = "crate";
+  }
+}
+
+function makeCrane(state: GameState, index: number, avoidCol?: number): Crane {
   let dropCol = Math.floor(Math.random() * COLS);
   if (avoidCol !== undefined && dropCol === avoidCol) {
     dropCol = (dropCol + 4) % COLS;
   }
   const dir: Dir = index === 0 ? -1 : randomDir();
   const stagger = index * 1.85 + Math.random() * 0.6;
-  return {
+  const crane: Crane = {
     x: dir < 0 ? craneRightX(stagger) : craneLeftX(stagger),
     dir,
     carrying: true,
     dropCol,
     dropping: 0,
+    cargo: "crate",
   };
+  armCraneCargo(state, crane);
+  return crane;
 }
 
 function recycleCrane(state: GameState, crane: Crane) {
@@ -280,6 +343,7 @@ function recycleCrane(state: GameState, crane: Crane) {
   crane.carrying = true;
   crane.dropping = 0;
   crane.dropCol = randomFreeCol(state) ?? Math.floor(Math.random() * COLS);
+  armCraneCargo(state, crane);
 }
 
 function spawnSkyCloud(onScreen = false): SkyCloud {
@@ -408,7 +472,8 @@ export function createGame(): GameState {
     phase: "title",
     player: emptyPlayer(),
     crates: [],
-    cranes: [makeCrane(0, COLS - 2)],
+    cranes: [],
+    fallingHearts: [],
     particles: [],
     popups: [],
     skyClouds: [spawnSkyCloud(true), spawnSkyCloud(true)],
@@ -429,6 +494,10 @@ export function createGame(): GameState {
     livesReady: false,
     lives: 0,
     nextLifeAt: 0,
+    craneTrip: 0,
+    nextHeartTrip: 0,
+    heartDropWindow: 0,
+    pendingLifeGains: 0,
     best: loadBest(),
     recordAtStart: loadBest(),
     globalBestAtStart: Number.POSITIVE_INFINITY,
@@ -440,6 +509,8 @@ export function createGame(): GameState {
     nextId: 1,
     time: 0,
   };
+  scheduleHeartDrop(state);
+  state.cranes = [makeCrane(state, 0, COLS - 2)];
   return state;
 }
 
@@ -471,7 +542,14 @@ export function startRun(state: GameState, opts?: { globalBest?: number }) {
   state.phase = "playing";
   state.player = emptyPlayer();
   state.crates = [];
-  state.cranes = [makeCrane(0, COLS - 2)];
+  state.cranes = [];
+  state.fallingHearts = [];
+  state.craneTrip = 0;
+  state.nextHeartTrip = 0;
+  state.heartDropWindow = 0;
+  state.pendingLifeGains = 0;
+  scheduleHeartDrop(state);
+  state.cranes = [makeCrane(state, 0, COLS - 2)];
   state.particles = [];
   state.popups = [];
   state.score = 0;
@@ -595,6 +673,101 @@ function spawnCrate(state: GameState, col: number) {
   return true;
 }
 
+function spawnFallingHeart(state: GameState, col: number) {
+  const top = ROWS - 1;
+  state.fallingHearts.push({
+    id: state.nextId++,
+    col,
+    row: top,
+    fromCol: col,
+    fromRow: top + 1,
+    animT: 0,
+    animDur: HEART_FALL_MS,
+    moving: true,
+    absorbT: 0,
+  });
+  sfx.drop();
+}
+
+function burstHeartBits(state: GameState, col: number, row: number) {
+  for (let i = 0; i < 12; i += 1) {
+    state.particles.push({
+      x: col + 0.5,
+      y: row + 0.5,
+      vx: (Math.random() - 0.5) * 0.014,
+      vy: 0.003 + Math.random() * 0.012,
+      life: 360 + Math.random() * 220,
+      max: 620,
+    });
+  }
+}
+
+function playerUnderHeart(state: GameState, heart: FallingHeart): boolean {
+  if (state.phase !== "playing" || state.player.pose === "dead") return false;
+  const hv = visualPos(heart);
+  const pv = visualPos(state.player, state.player.pose === "jump");
+  if (Math.abs(hv.col - pv.col) > 0.42) return false;
+  return hv.row <= pv.row + 0.9 && hv.row >= pv.row - 0.35;
+}
+
+function catchFallingHeart(state: GameState, heart: FallingHeart) {
+  const vis = visualPos(heart);
+  heart.fromCol = vis.col;
+  heart.fromRow = vis.row;
+  heart.moving = false;
+  heart.absorbT = 0.001;
+  if (gainLocalLife(state)) {
+    state.popups.push({ col: vis.col, row: vis.row, text: "+1", life: 700 });
+  }
+  sfx.heartCatch();
+}
+
+function splatFallingHeart(state: GameState, heart: FallingHeart) {
+  const vis = visualPos(heart);
+  state.fallingHearts = state.fallingHearts.filter((item) => item.id !== heart.id);
+  burstHeartBits(state, vis.col, vis.row);
+  state.shake = 5;
+  state.flash = 0.45;
+  sfx.smash();
+}
+
+function heartHitsCrate(state: GameState, heart: FallingHeart): boolean {
+  const hv = visualPos(heart);
+  for (const crate of state.crates) {
+    const cv = visualPos(crate);
+    if (Math.abs(hv.col - cv.col) > 0.42) continue;
+    if (hv.row <= cv.row + 0.95 && hv.row >= cv.row - 0.2) return true;
+  }
+  return false;
+}
+
+function updateFallingHearts(state: GameState, dt: number, canCatch: boolean) {
+  for (const heart of [...state.fallingHearts]) {
+    if (heart.absorbT > 0) {
+      heart.absorbT += dt / HEART_ABSORB_MS;
+      if (heart.absorbT >= 1) {
+        state.fallingHearts = state.fallingHearts.filter((item) => item.id !== heart.id);
+      }
+      continue;
+    }
+    const landed = stepAnim(heart, dt);
+    if (canCatch && playerUnderHeart(state, heart)) {
+      catchFallingHeart(state, heart);
+      continue;
+    }
+    if (heartHitsCrate(state, heart)) {
+      splatFallingHeart(state, heart);
+      continue;
+    }
+    if (heart.moving) continue;
+    if (landed && heart.row <= 0) {
+      splatFallingHeart(state, heart);
+      continue;
+    }
+    if (heart.row > 0) beginMove(heart, heart.col, heart.row - 1, HEART_FALL_MS);
+  }
+}
+
 function crateRowsInCol(crate: Crate, col: number): number[] {
   const rows: number[] = [];
   if (crate.col === col) rows.push(crate.row);
@@ -649,16 +822,24 @@ function randomFreeCol(state: GameState, avoid: number[] = []): number | null {
 function syncCraneCount(state: GameState) {
   const want = Math.min(MAX_CRANES, craneThreshold(state.score));
   while (state.cranes.length < want) {
-    state.cranes.push(makeCrane(state.cranes.length));
+    state.cranes.push(makeCrane(state, state.cranes.length));
   }
 }
 
 function retargetDrop(state: GameState, crane: Crane) {
+  if (crane.cargo === "heart") {
+    crane.dropCol = Math.floor(Math.random() * COLS);
+    return;
+  }
   const next = randomFreeCol(
     state,
     state.cranes.map((item) => item.dropCol),
   );
   if (next !== null) crane.dropCol = next;
+}
+
+function sendCraneToNearestEdge(crane: Crane) {
+  crane.dir = crane.x <= (COLS - 1) / 2 ? -1 : 1;
 }
 
 function bounceLoadedCrane(state: GameState, crane: Crane) {
@@ -684,8 +865,14 @@ function updateCranes(state: GameState, dt: number) {
       crane.dropping -= dt;
       if (crane.dropping <= 0 && crane.carrying) {
         const col = Math.max(0, Math.min(COLS - 1, Math.round(crane.x)));
-        if (!dropBlocked(state, col) && spawnCrate(state, col)) crane.carrying = false;
-        else {
+        if (crane.cargo === "heart") {
+          spawnFallingHeart(state, col);
+          crane.carrying = false;
+          sendCraneToNearestEdge(crane);
+        } else if (!dropBlocked(state, col) && spawnCrate(state, col)) {
+          crane.carrying = false;
+          sendCraneToNearestEdge(crane);
+        } else {
           crane.dropping = 0;
           retargetDrop(state, crane);
         }
@@ -695,10 +882,11 @@ function updateCranes(state: GameState, dt: number) {
         crane.dir < 0
           ? crane.x <= crane.dropCol + 0.18 && crane.x >= crane.dropCol - 0.4
           : crane.x >= crane.dropCol - 0.18 && crane.x <= crane.dropCol + 0.4;
-      if (atDrop && !dropBlocked(state, crane.dropCol)) {
+      const canDrop = crane.cargo === "heart" || !dropBlocked(state, crane.dropCol);
+      if (atDrop && canDrop) {
         crane.dropping = CRANE_DROP_MS;
       } else {
-        if (dropBlocked(state, crane.dropCol)) retargetDrop(state, crane);
+        if (crane.cargo !== "heart" && dropBlocked(state, crane.dropCol)) retargetDrop(state, crane);
         const passed = crane.dir < 0 ? crane.x < crane.dropCol - 0.45 : crane.x > crane.dropCol + 0.45;
         if (passed) {
           retargetDrop(state, crane);
@@ -1266,11 +1454,13 @@ export function updateGame(state: GameState, dt: number) {
       if (crate.crushTo != null) stepCrushSettle(crate, dt);
       else stepAnim(crate, dt);
     }
+    updateFallingHearts(state, dt, false);
     state.deathT -= dt;
     return;
   }
 
   updateCranes(state, dt);
+  updateFallingHearts(state, dt, true);
   state.player.walkHold = Math.max(0, state.player.walkHold - dt);
   state.player.pushHold = Math.max(0, state.player.pushHold - dt);
   state.player.jumpT = Math.max(0, state.player.jumpT - dt);

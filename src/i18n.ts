@@ -2,7 +2,7 @@ export const STR = {
   title: "BoxDrop",
   subtitle: "Push. Stack. Survive.",
   start: "Start game",
-  how: "Each dropped or smashed crate is +1. Push crates and fill the bottom row.",
+  how: "Each dropped or smashed crate is +1. Catch a falling heart to gain a life. Push crates and fill the bottom row.",
   score: "Score",
   best: "Best",
   cranes: "Cranes",

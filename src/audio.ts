@@ -106,6 +106,11 @@ export const sfx = {
     window.setTimeout(() => beep(180, 0.16, "triangle", 0.5, 80), 40);
   },
   crush: () => beep(220, 0.45, "sawtooth", 0.7, 50),
+  heartCatch: () => {
+    beep(520, 0.08, "square", 0.45, 720);
+    window.setTimeout(() => beep(780, 0.12, "square", 0.4), 70);
+  },
+  heartSplat: () => beep(160, 0.16, "triangle", 0.5, 70),
   start: () => {
     beep(260, 0.1, "square", 0.4);
     window.setTimeout(() => beep(390, 0.16, "square", 0.45), 90);

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.23
+
+- Hearts refill every 12 hours; a crane drops one on a random trip in 75-150, then 200 later (275-350, and so on)
+- Catch a heart to absorb it into the player; it still bursts on the floor or a crate
+- Empty cranes leave toward the nearest screen edge
+
 ## v0.1.22
 
 - After sign-in, one heart lets you continue once after a crush; the next heart takes 24 hours

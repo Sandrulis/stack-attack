@@ -88,6 +88,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, state: GameState) {
   drawWorld(ctx, state);
   drawCranes(ctx, state);
   drawCrates(ctx, state, false);
+  drawFallingHearts(ctx, state);
   drawPlayer(ctx, state.player, state.time, state.deathT);
   drawCrates(ctx, state, true);
   drawParticles(ctx, state);
@@ -444,7 +445,8 @@ function drawCranes(ctx: CanvasRenderingContext2D, state: GameState) {
     ctx.fillRect(x + CELL / 2 - 2, railY + 22, 4, hookY - railY - 14);
     box(ctx, x + CELL / 2 - 12, hookY, 24, 10, PALETTE.iron, PALETTE.iron, PALETTE.grout);
     if (crane.carrying) {
-      drawCrateSprite(ctx, x, hookY + 8, CRATE_SCALE);
+      if (crane.cargo === "heart") drawHeartSprite(ctx, x + CELL * 0.18, hookY + 10, CELL * 0.64);
+      else drawCrateSprite(ctx, x, hookY + 8, CRATE_SCALE);
     }
     ctx.restore();
   }
@@ -458,6 +460,61 @@ function drawCrates(ctx: CanvasRenderingContext2D, state: GameState, front: bool
     const { x, y } = gridToScreen(pos.col, pos.row);
     drawCrateSprite(ctx, x, y, CRATE_SCALE);
   }
+}
+
+function drawFallingHearts(ctx: CanvasRenderingContext2D, state: GameState) {
+  for (const heart of state.fallingHearts) {
+    const absorb = Math.min(1, heart.absorbT);
+    let col: number;
+    let row: number;
+    let size = CELL * 0.76;
+    let alpha = 1;
+    if (absorb > 0) {
+      const player = visualPos(state.player, state.player.pose === "jump");
+      const ease = absorb * absorb;
+      col = heart.fromCol + (player.col - heart.fromCol) * ease;
+      row = heart.fromRow + (player.row - heart.fromRow) * ease;
+      size *= 1 - absorb * 0.62;
+      alpha = 1 - absorb;
+    } else {
+      const pos = visualPos(heart);
+      col = pos.col;
+      row = pos.row;
+    }
+    const { x, y } = gridToScreen(col, row);
+    const inset = (CELL - size) / 2;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    drawHeartSprite(ctx, x + inset, y + inset, size);
+    ctx.restore();
+  }
+}
+
+function drawHeartSprite(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(size / 16, size / 16);
+  ctx.fillStyle = "#e23b4d";
+  ctx.strokeStyle = "#1a1a1a";
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(8, 14.2);
+  ctx.lineTo(2.2, 8.6);
+  ctx.bezierCurveTo(1.1, 7.5, 1.1, 5.6, 2.3, 4.5);
+  ctx.bezierCurveTo(3.4, 3.4, 5.2, 3.4, 6.3, 4.5);
+  ctx.lineTo(8, 6.2);
+  ctx.lineTo(9.7, 4.5);
+  ctx.bezierCurveTo(10.8, 3.4, 12.6, 3.4, 13.7, 4.5);
+  ctx.bezierCurveTo(14.9, 5.6, 14.9, 7.5, 13.7, 8.6);
+  ctx.lineTo(8, 14.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.28)";
+  ctx.beginPath();
+  ctx.ellipse(5.4, 6.2, 1.4, 1.9, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawCrateSprite(ctx: CanvasRenderingContext2D, x: number, y: number, scale: number) {
@@ -773,7 +830,10 @@ function drawParticles(ctx: CanvasRenderingContext2D, state: GameState) {
   for (const part of state.particles) {
     const { x, y } = gridToScreen(part.x, part.y);
     const s = part.life > 200 ? 10 : 6;
-    box(ctx, x, y, s, s, PALETTE.crateLight, PALETTE.gold, PALETTE.crateDark);
+    const mid = part.color ?? PALETTE.crateLight;
+    const light = part.color ?? PALETTE.gold;
+    const dark = part.color ? "#7a1824" : PALETTE.crateDark;
+    box(ctx, x, y, s, s, mid, light, dark);
   }
 }
 
