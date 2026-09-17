@@ -395,6 +395,18 @@ export function hydrateLeader(state: GameState, name: string, score: number) {
   state.leaderScore = Math.max(0, score);
 }
 
+export function syncLocalBest(state: GameState) {
+  if (state.score > state.best) {
+    state.best = state.score;
+    saveBest(state.best);
+  }
+}
+
+export function runBeatRecord(state: GameState): boolean {
+  if (state.phase !== "playing" && state.phase !== "paused") return false;
+  return state.score > state.recordAtStart || state.score > state.globalBestAtStart;
+}
+
 export function startRun(state: GameState, opts?: { globalBest?: number }) {
   state.phase = "playing";
   state.player = emptyPlayer();
@@ -523,12 +535,29 @@ function spawnCrate(state: GameState, col: number) {
   return true;
 }
 
-function crateFallsInCol(crate: Crate, col: number): boolean {
-  return crateIsFalling(crate) && (crate.col === col || crate.fromCol === col);
+function crateRowsInCol(crate: Crate, col: number): number[] {
+  const rows: number[] = [];
+  if (crate.col === col) rows.push(crate.row);
+  if (crate.moving && crate.fromCol === col && !rows.includes(crate.fromRow)) rows.push(crate.fromRow);
+  return rows;
 }
 
-function columnHasFallingCrate(state: GameState, col: number, ignoreId = -1): boolean {
-  return state.crates.some((crate) => crate.id !== ignoreId && crateFallsInCol(crate, col));
+function fallingRowsInCol(state: GameState, col: number, ignoreId = -1): number[] {
+  const rows: number[] = [];
+  for (const crate of state.crates) {
+    if (crate.id === ignoreId || !crateIsFalling(crate)) continue;
+    for (const row of crateRowsInCol(crate, col)) rows.push(row);
+  }
+  return rows;
+}
+
+function rowsTooClose(a: number[], b: number[]): boolean {
+  for (const x of a) {
+    for (const y of b) {
+      if (Math.abs(x - y) < 2) return true;
+    }
+  }
+  return false;
 }
 
 function topBusy(state: GameState, col: number): boolean {
@@ -540,7 +569,8 @@ function topBusy(state: GameState, col: number): boolean {
 }
 
 function dropBlocked(state: GameState, col: number): boolean {
-  return topBusy(state, col) || columnHasFallingCrate(state, col);
+  if (topBusy(state, col) || blocked(state, col, ROWS - 1)) return true;
+  return rowsTooClose([ROWS - 1, ROWS], fallingRowsInCol(state, col));
 }
 
 function randomFreeCol(state: GameState, avoid: number[] = []): number | null {
@@ -628,23 +658,17 @@ function updateCranes(state: GameState, dt: number) {
 
 function applyCrateGravity(state: GameState) {
   const ordered = [...state.crates].sort((a, b) => a.row - b.row);
-  const fallingCols = new Set<number>();
-  for (const crate of ordered) {
-    if (crateIsFalling(crate)) fallingCols.add(crate.col);
-    if (crateIsFalling(crate) && crate.fromCol !== crate.col) fallingCols.add(crate.fromCol);
-  }
   for (const crate of ordered) {
     if (crate.moving) continue;
     if (supported(state, crate.col, crate.row, crate.id)) continue;
-    if (fallingCols.has(crate.col)) continue;
     const dest = crate.row - 1;
+    if (rowsTooClose([crate.row, dest], fallingRowsInCol(state, crate.col, crate.id))) continue;
     const ontoPlayer =
       state.player.pose !== "dead" &&
       !playerAirborne(state.player) &&
       state.player.col === crate.col &&
       state.player.row === dest;
     beginMove(crate, crate.col, dest, CRATE_FALL_MS, !ontoPlayer);
-    fallingCols.add(crate.col);
   }
 }
 
@@ -752,10 +776,7 @@ function killPlayer(state: GameState, crate?: Crate) {
     });
   }
   sfx.crush();
-  if (state.score > state.best) {
-    state.best = state.score;
-    saveBest(state.best);
-  }
+  syncLocalBest(state);
 }
 
 function bottomRowFull(state: GameState): boolean {
@@ -803,7 +824,7 @@ function crateCanPush(state: GameState, crate: Crate, dir: Dir): boolean {
   if (!falling && crateAt(state, crate.col, crate.row + 1)) return false;
   const dest = crate.col + dir;
   if (dest < 0 || dest >= COLS) return false;
-  if (falling && columnHasFallingCrate(state, dest, crate.id)) return false;
+  if (falling && rowsTooClose([crate.row, crate.fromRow], fallingRowsInCol(state, dest, crate.id))) return false;
   return !blocked(state, dest, crate.row, crate.id);
 }
 

@@ -1,6 +1,6 @@
 # BoxDrop
 
-**Current version:** `0.1.20`
+**Current version:** `0.1.21`
 
 **BoxDrop** is a 2D warehouse game in the browser. Slogan: *Push. Stack. Survive.* Push crates, dodge drops from overhead cranes, and clear a full bottom row for +1.
 
@@ -32,12 +32,12 @@ Sign in with Google before you play. After login, username and play counts are i
 
 - Cranes travel the full rail (with several, in both directions) and drop crates at random. If a column is blocked, the crane patrols until it can drop; after a drop the empty crane leaves twice as fast.
 - The playfield is **6×10**; only a crane uses a seventh row.
-- Crates fall until they hit the floor or another crate. Only one crate may fall in a column at a time - the next starts after it lands.
+- Crates fall until they hit the floor or another crate. Two crates in one column may fall or drop at once only if at least one empty cell sits between them.
 - A falling crate can crush you - then the game is over.
 - When the bottom row is full it clears at once, play continues, crates above fall one at a time per column, and you score **+1**.
 - Score brings up to **4 cranes**, and drops get faster.
 - White puffy clouds sometimes drift behind the windows. After long gaps a storm can bring darkness and rain.
-- Beat your own record and the windows stay on a red sunset (sun half below the sill) until the run ends.
+- Beat your own record and the windows stay on a red sunset (sun half below the sill) until the run ends. Restart keeps a beaten personal or global record before the new run.
 - Beat the global high score and the windows stay night with fireworks.
 - Scores list a country under each name (from IP). A banner plane sometimes flies past with the leader name and score.
 

@@ -21,6 +21,8 @@ import {
   tryJump,
   tryWalk,
   updateGame,
+  runBeatRecord,
+  syncLocalBest,
 } from "./game/engine";
 import { drawGame } from "./game/render";
 import type { User } from "@supabase/supabase-js";
@@ -607,6 +609,10 @@ async function beginRun() {
   bumpOverlay();
   renderOverlay();
   try {
+    if (runBeatRecord(state)) {
+      syncLocalBest(state);
+      await saveFinishedRun();
+    }
     const next = await startPlayerRun(authUser!);
     if (next) {
       stats = next;
@@ -627,6 +633,7 @@ async function beginRun() {
 async function saveFinishedRun() {
   if (runSaved || !authUser) return;
   runSaved = true;
+  syncLocalBest(state);
   try {
     const next = await finishPlayerRun(state.score);
     if (next) {

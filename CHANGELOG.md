@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.21
+
+- Cranes can drop into a column while a crate falls lower down, if at least one cell sits between them
+- Restart saves a beaten personal or global record before the new run
+
 ## v0.1.20
 
 - Phone joystick is a 3-position switch (left / center / right), so a light press no longer walks
