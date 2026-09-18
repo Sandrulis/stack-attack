@@ -240,7 +240,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 3px;
-  min-width: 77px;
+  min-width: 45px;
 }
 
 .life-timer {

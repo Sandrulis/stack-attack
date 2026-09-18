@@ -17,7 +17,7 @@ The game is Vite + TypeScript + Canvas. Core logic: `src/game/engine.ts`, drawin
 3. Fill `.env.local` (and Vercel) with `SUPABASE_URL`, `SUPABASE_ANON_KEY`. For local migrations, `SUPABASE_DB_PASSWORD` (Database password, not the anon key). Do not put the DB password or service role on Vercel.
 4. `npm run db:migrate` — the agent runs this after new `supabase/migrations/*.sql` files.
 
-Tables `player_profiles` and `player_play_days` use RLS deny; the client goes through `ensure_player`, `set_player_name`, `start_player_run`, `finish_player_run`, `spend_player_life`, `gain_player_life`, `player_leaderboard`. Hearts (lives) sit on `player_profiles.lives` / `next_life_at`. New players start with 1 heart and refill one every 12 hours. Heart cranes use random trip windows 75-150, then +200 (275-350, and so on). Catching a heart fades it into the player.
+Tables `player_profiles` and `player_play_days` use RLS deny; the client goes through `ensure_player`, `set_player_name`, `start_player_run`, `finish_player_run`, `spend_player_life`, `gain_player_life`, `player_leaderboard`. Hearts (lives) sit on `player_profiles.lives` / `next_life_at`. New players start with 1 heart, can hold at most 3, and refill one every 12 hours. Heart cranes use random trip windows 75-150, then +200 (275-350, and so on). Catching a heart fades it into the player.
 
 ## Versioning and commits
 

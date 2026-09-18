@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.24
+
+- Players can hold at most 3 hearts
+
 ## v0.1.23
 
 - Hearts refill every 12 hours; a crane drops one on a random trip in 75-150, then 200 later (275-350, and so on)

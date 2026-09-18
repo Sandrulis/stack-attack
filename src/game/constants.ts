@@ -28,7 +28,7 @@ export const HEART_DROP_RANGE = 75;
 export const HEART_DROP_STEP = 200;
 
 export const MAX_CRANES = 4;
-export const MAX_LIVES = 5;
+export const MAX_LIVES = 3;
 export const START_LIVES = 1;
 export const HEART_REGEN_MS = 12 * 60 * 60 * 1000;
 export const HIGH_SCORE_KEY = "stack-attack-highscore";
