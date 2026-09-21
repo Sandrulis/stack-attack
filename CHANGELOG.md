@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.1.25
+
+- Cranes release from travel height instead of lowering the cargo first
+- A crane still drops if another only wants that column; it waits only when a crate is already falling there
+
 ## v0.1.24
 
 - Players can hold at most 3 hearts

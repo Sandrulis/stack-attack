@@ -3,7 +3,6 @@ import {
   CANVAS_W,
   CELL,
   COLS,
-  CRANE_DROP_MS,
   CRATE_FALL_MS,
   CRATE_SLIDE_MS,
   CRUSH_HIT_ROW,
@@ -54,7 +53,6 @@ export type Crane = {
   dir: Dir;
   carrying: boolean;
   dropCol: number;
-  dropping: number;
   cargo: "crate" | "heart";
 };
 
@@ -329,7 +327,6 @@ function makeCrane(state: GameState, index: number, avoidCol?: number): Crane {
     dir,
     carrying: true,
     dropCol,
-    dropping: 0,
     cargo: "crate",
   };
   armCraneCargo(state, crane);
@@ -341,7 +338,6 @@ function recycleCrane(state: GameState, crane: Crane) {
   const stagger = 0.4 + Math.random() * 1.6;
   crane.x = crane.dir < 0 ? craneRightX(stagger) : craneLeftX(stagger);
   crane.carrying = true;
-  crane.dropping = 0;
   crane.dropCol = randomFreeCol(state) ?? Math.floor(Math.random() * COLS);
   armCraneCargo(state, crane);
 }
@@ -831,11 +827,24 @@ function retargetDrop(state: GameState, crane: Crane) {
     crane.dropCol = Math.floor(Math.random() * COLS);
     return;
   }
-  const next = randomFreeCol(
-    state,
-    state.cranes.map((item) => item.dropCol),
-  );
+  const next = randomFreeCol(state);
   if (next !== null) crane.dropCol = next;
+}
+
+function releaseCraneCargo(state: GameState, crane: Crane) {
+  const col = Math.max(0, Math.min(COLS - 1, Math.round(crane.x)));
+  if (crane.cargo === "heart") {
+    spawnFallingHeart(state, col);
+    crane.carrying = false;
+    sendCraneToNearestEdge(crane);
+    return;
+  }
+  if (spawnCrate(state, col)) {
+    crane.carrying = false;
+    sendCraneToNearestEdge(crane);
+    return;
+  }
+  retargetDrop(state, crane);
 }
 
 function sendCraneToNearestEdge(crane: Crane) {
@@ -858,33 +867,17 @@ function updateCranes(state: GameState, dt: number) {
   syncCraneCount(state);
   const speed = 1.28 + state.score * 0.008;
   for (const crane of state.cranes) {
-    const pace = crane.dropping > 0 ? 0.55 : crane.carrying ? 1 : 2;
+    const pace = crane.carrying ? 1 : 2;
     crane.x += (crane.dir * speed * pace * dt) / 1000;
 
-    if (crane.dropping > 0) {
-      crane.dropping -= dt;
-      if (crane.dropping <= 0 && crane.carrying) {
-        const col = Math.max(0, Math.min(COLS - 1, Math.round(crane.x)));
-        if (crane.cargo === "heart") {
-          spawnFallingHeart(state, col);
-          crane.carrying = false;
-          sendCraneToNearestEdge(crane);
-        } else if (!dropBlocked(state, col) && spawnCrate(state, col)) {
-          crane.carrying = false;
-          sendCraneToNearestEdge(crane);
-        } else {
-          crane.dropping = 0;
-          retargetDrop(state, crane);
-        }
-      }
-    } else if (crane.carrying) {
+    if (crane.carrying) {
       const atDrop =
         crane.dir < 0
           ? crane.x <= crane.dropCol + 0.18 && crane.x >= crane.dropCol - 0.4
           : crane.x >= crane.dropCol - 0.18 && crane.x <= crane.dropCol + 0.4;
       const canDrop = crane.cargo === "heart" || !dropBlocked(state, crane.dropCol);
       if (atDrop && canDrop) {
-        crane.dropping = CRANE_DROP_MS;
+        releaseCraneCargo(state, crane);
       } else {
         if (crane.cargo !== "heart" && dropBlocked(state, crane.dropCol)) retargetDrop(state, crane);
         const passed = crane.dir < 0 ? crane.x < crane.dropCol - 0.45 : crane.x > crane.dropCol + 0.45;
@@ -896,7 +889,7 @@ function updateCranes(state: GameState, dt: number) {
       }
     }
 
-    if (crane.carrying || crane.dropping > 0) bounceLoadedCrane(state, crane);
+    if (crane.carrying) bounceLoadedCrane(state, crane);
     else {
       const offscreen = crane.dir < 0 ? crane.x < craneLeftX() : crane.x > craneRightX();
       if (offscreen) recycleCrane(state, crane);

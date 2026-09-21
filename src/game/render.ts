@@ -440,7 +440,7 @@ function drawCranes(ctx: CanvasRenderingContext2D, state: GameState) {
     }
     box(ctx, x - 4, railY, CELL + 8, 22, PALETTE.iron, PALETTE.iron, PALETTE.ironDark);
     box(ctx, x + 10, railY - 10, CELL - 20, 14, PALETTE.gold, "#fff6a8", PALETTE.goldDark);
-    const hookY = railY + (crane.dropping > 0 ? 52 : 30);
+    const hookY = railY + 30;
     ctx.fillStyle = PALETTE.ironDark;
     ctx.fillRect(x + CELL / 2 - 2, railY + 22, 4, hookY - railY - 14);
     box(ctx, x + CELL / 2 - 12, hookY, 24, 10, PALETTE.iron, PALETTE.iron, PALETTE.grout);

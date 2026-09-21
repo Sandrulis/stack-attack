@@ -1,6 +1,6 @@
 # BoxDrop
 
-**Current version:** `0.1.24`
+**Current version:** `0.1.25`
 
 **BoxDrop** is a 2D warehouse game in the browser. Slogan: *Push. Stack. Survive.* Push crates, dodge drops from overhead cranes, and clear a full bottom row for +1.
 
@@ -30,7 +30,7 @@ Sign in with Google before you play. After login, username and play counts are i
 
 ## Rules
 
-- Cranes travel the full rail (with several, in both directions) and drop crates at random. If a column is blocked, the crane patrols until it can drop; after a drop the empty crane leaves twice as fast.
+- Cranes travel the full rail (with several, in both directions) and drop crates at random from travel height. If a crate is already falling in that column, the crane patrols until it can drop; after a drop the empty crane leaves twice as fast.
 - The playfield is **6×10**; only a crane uses a seventh row.
 - Crates fall until they hit the floor or another crate. Two crates in one column may fall or drop at once only if at least one empty cell sits between them.
 - A falling crate can crush you - then the game is over.

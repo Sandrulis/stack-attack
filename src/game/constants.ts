@@ -19,7 +19,6 @@ export const DEATH_MS = 900;
 export const CRUSH_HIT_ROW = 0.85;
 export const CRUSH_REST_ROW = 0.2;
 export const CRUSH_SETTLE_MS = 160;
-export const CRANE_DROP_MS = 420;
 export const CRATE_SCALE = 1;
 export const HEART_FALL_MS = 240;
 export const HEART_ABSORB_MS = 320;
