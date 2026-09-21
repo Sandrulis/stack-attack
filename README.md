@@ -1,6 +1,6 @@
 # BoxDrop
 
-**Current version:** `0.1.25`
+**Current version:** `0.1.26`
 
 **BoxDrop** is a 2D warehouse game in the browser. Slogan: *Push. Stack. Survive.* Push crates, dodge drops from overhead cranes, and clear a full bottom row for +1.
 

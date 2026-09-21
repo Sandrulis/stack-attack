@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.26
+
+- Umami in the page head so visitor traffic can be tracked
+
 ## v0.1.25
 
 - Cranes release from travel height instead of lowering the cargo first
